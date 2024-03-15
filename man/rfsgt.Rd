@@ -1,0 +1,498 @@
+\name{rfsgt}
+\alias{rfsgt}
+\alias{filter.rfsgt}
+\alias{filter.custom.rfsgt}
+\alias{gradient.rfsgt}
+\alias{gradient.fast.rfsgt}
+\alias{vimp.rfsgt}
+\alias{make.baselearner}
+\title{Random Forest Super Greedy Trees}
+\description{
+  Grow a forest of Super Greedy Trees (SGTs) using lasso.
+}
+
+\usage{
+rfsgt(formula,
+      data,
+      ntree = 100,
+      hcut = 1,
+      treesize = NULL,
+      nodesize = NULL,
+      tune = FALSE,
+      filter = (hcut > 1),
+      fast = TRUE,
+      cart.lasso = (hcut < 2),
+      eps = .005,
+      maxit = 500,
+      nfolds = 10,
+      block.size = 10,
+      bootstrap = c("by.root", "none", "by.user"),
+      samptype = c("swor", "swr"),  samp = NULL, membership = FALSE,
+      sampsize = if (samptype == "swor") function(x){x * .632} else function(x){x},
+      seed = NULL,
+      do.trace = FALSE,
+      ...)
+}
+
+\arguments{
+
+  \item{formula}{Formula describing the model to be fit.}
+
+  \item{data}{Data frame containing response and features.}
+
+  \item{ntree}{Number of trees to grow.}
+
+  \item{hcut}{Integer value indexing type of parametric regression model
+    to use for splitting.  See details below.}
+
+  \item{treesize}{Function specifying size of tree (number of terminal
+    nodes) where first input is \code{n} sample size and second input is
+    \code{hcut}.  Can also be supplied as an integer value and defaults
+    to an internal function if unspecified.  If \code{tune}=TRUE, this
+    is the maximum number of allowable splits.  If \code{tune}=FALSE,
+    this is the target number of tree splits.}
+
+  \item{nodesize}{Minumum size of terminal node.  Set internally if
+    not specified.}
+
+  \item{tune}{Adaptively determine the optimal tree size using
+    out-of-bag empirical risk?}
+    
+  \item{filter}{Logical value specifying whether filtering should be
+    applied.  Can also be a character vector of feature names specifying
+    which variables to use.  This latter approach is useful in
+    high-dimensional problems when \code{hcut} is larger than 1. See
+    examples below.}
+
+  \item{fast}{Use fast filtering?}
+    
+  \item{cart.lasso}{Logical value specifying whether CART splits should
+    be used to split a tree node in place of lasso when CART is better
+    at reducing empirical risk for the node.  This generally speeds up
+    calculations but it can impact performance, especially for
+    \code{hcut} greater than 1.  In the latter case, the option can be
+    be useful in situations where numerical instability occurs for the
+    lasso (see the boston housing factor example below for
+    illustration). Note that as an intended side effect, when
+    \code{cart.lasso} is in on, and \code{hcut} is larger than 1,
+    adaptive tree size is automatically turned off.}
+  
+  \item{eps}{Parameter used by \code{cdlasso}.}
+
+  \item{maxit}{Parameter used by \code{cdlasso}.}
+
+  \item{nfolds}{Number of cross-validation folds to be used for the lasso.}
+
+  \item{block.size}{Determines how cumulative error rate is calculated.  To
+    obtain the cumulative error rate on every nth tree, set the value to
+    an integer between 1 and \code{ntree}.}
+  
+  \item{bootstrap}{Bootstrap protocol.  Default is \code{by.root} which
+    bootstraps the data by sampling with or without replacement (without
+    replacement is the default; see the option \code{samptype} below).
+    If \code{none}, the data is not bootstrapped (it is not possible to
+    return OOB ensembles or prediction error in this case).  If
+    \code{by.user}, the bootstrap specified by \code{samp} is used.}
+
+  \item{samptype}{Type of bootstrap used when \code{by.root} is in
+    effect.  Choices are \code{swor} (sampling without replacement; 
+    the default) and \code{swr} (sampling with replacement).}
+
+  \item{samp}{Bootstrap specification when \code{by.user} is in
+    effect.  Array of dim \code{n x ntree} specifying how many
+    times each record appears inbag in the bootstrap for each tree.}
+
+  \item{membership}{Should terminal node membership and inbag
+    information be returned?}
+
+  \item{sampsize}{Function specifying bootstrap size when \code{by.root}
+    is in effect.  For sampling without replacement, it is the requested
+    size of the sample, which by default is .632 times the sample size.
+    For sampling with replacement, it is the sample size.  Can also be
+    specified using a number.}
+
+  \item{seed}{Negative integer specifying seed for the random number
+    generator.}
+
+  \item{do.trace}{Number of seconds between updates to the user on
+    approximate time to completion.}
+
+  \item{...}{Further arguments passed to \command{cdlasso} and
+    \command{rfsrc}.}
+  
+
+}
+
+\details{
+
+  A flexible class of parametric models are used for tree splitting
+  using lasso.  This includes CART splits, hyperplane, ellipsoid and
+  hyperboloid cuts.  Coordinate descent is used for fast calculation of
+  the penalized lasso parametric models.
+
+  These trees are called super greedy trees (SGTs) and are constructed
+  using best split first (BSF) where cuts are made sequentially in order
+  of greatest empirical risk reduction.
+
+  Parametric linear models used for splitting are indexed by parameter
+  \code{hcut} corresponding to the following geometric regions:
+
+\enumerate{
+
+   \item \code{hcut}=1 (hyperplane) linear model using all variables.
+   \item \code{hcut}=2 (ellipse) plus all quadratic terms.
+   \item \code{hcut}=3 (oblique ellipse) plus all pairwise interactions.
+   \item \code{hcut}=4 plus all polynomials of degree 3 of two variables.
+   \item \code{hcut}=5 plus all polynomials of degree 4 of three variables.
+   \item \code{hcut}=6 plus all three-way interactions.
+   \item \code{hcut}=7 plus all four-way interactions.
+
+ }
+
+ Setting \code{hcut}=0 gives CART splits where cuts are parallel to the
+ coordinate axis (axis-aligned cuts).  Thus, \code{hcut}=0 is similar to
+ random forests.
+
+}
+
+\value{
+
+  A forest of SGTs trained on the learning data which can be used for
+  prediction.
+  
+}
+
+\author{
+
+  Hemant Ishwaran and Udaya B. Kogalur
+
+}
+
+\references{
+  
+  Ishwaran H. (2023).  Super greedy regression trees with coordinate descent.
+  Technical Report.  
+  
+}
+
+\seealso{
+
+  \command{\link{cdlasso}}
+  
+}
+
+
+\examples{
+\donttest{
+  
+## ------------------------------------------------------------
+##  boston housing
+## ------------------------------------------------------------
+
+## load the data
+data(BostonHousing, package = "mlbench")
+
+## default basic call
+print(rfsgt(medv~., BostonHousing))
+
+## variable selection
+sort(vimp.rfsgt(medv~.,BostonHousing))
+
+## examples of hcut=0 (similar to random forests ... but using BSF)
+print(rfsgt(medv~., BostonHousing, hcut=0))
+print(rfsgt(medv~., BostonHousing, hcut=0, nodesize=1))
+
+## hcut=1 with smaller nodesize
+print(rfsgt(medv~., BostonHousing, nodesize=1))
+
+## ------------------------------------------------------------
+## boston housing with factors
+## ------------------------------------------------------------
+     
+## load the data
+data(BostonHousing, package = "mlbench")
+     
+## make some features into factors
+Boston <- BostonHousing
+Boston$zn <- factor(Boston$zn)
+Boston$chas <- factor(Boston$chas)
+Boston$lstat <- factor(round(0.2 * Boston$lstat))
+Boston$nox <- factor(round(20 * Boston$nox))
+Boston$rm <- factor(round(Boston$rm))
+     
+## random forest: hcut=0 
+print(rfsgt(medv~., Boston, hcut=0, nodesize=1, ntree=500))
+
+## hcut=3 with cart.lasso TRUE
+print(rfsgt(medv~., Boston, hcut=3, cart.lasso=TRUE))
+
+
+## ------------------------------------------------------------
+##  ozone
+## ------------------------------------------------------------
+
+## load the data
+data(Ozone, package = "mlbench")
+
+print(rfsgt(V4~., na.omit(Ozone), hcut=0, nodesize=1, ntree=500))
+print(rfsgt(V4~., na.omit(Ozone), hcut=1))
+print(rfsgt(V4~., na.omit(Ozone), hcut=2))
+print(rfsgt(V4~., na.omit(Ozone), hcut=3))
+
+
+## ------------------------------------------------------------
+##  non-linear boundary illustrates hcut
+## ------------------------------------------------------------
+
+## simulate non-linear boundary
+n <- 1000
+p <- 10
+signal <- 10
+treesize <- 40
+ngrid <- 100
+
+## train
+x <- matrix(runif(n * p), ncol = p)
+fx <- signal * sin(pi * x[, 1] * x[, 2])
+nl2d <- data.frame(y = fx, x)
+
+## truth
+x1 <- x2 <- seq(0, 1, length = ngrid)
+truth <- signal * sin(outer(pi * x1, x2, "*"))
+
+## test
+x.tst <- do.call(rbind, lapply(x1, function(x1j) {
+  cbind(x1j, x2, matrix(runif(length(x2) * (p-2)), ncol=(p-2)))
+}))
+colnames(x.tst) <- colnames(x)
+fx.tst <- signal * sin(pi * x.tst[, 1] * x.tst[, 2])
+nl2d.tst <- data.frame(y = fx.tst, x.tst)
+
+
+## SGT for different hcut values
+rO <- lapply(0:4, function(hcut) {
+  cat("hcut", hcut, "\n")
+  rfsgt(y~., nl2d, ntree=1, hcut=hcut, treesize=treesize, bootstrap="none")
+})
+
+if (library("interp", logical.return = TRUE)) {
+
+  ## nice little wrapper for plotting results
+  plot.image <- function(x, y, z, linear=TRUE, nlevels=100, points=FALSE) {
+    xo <- x; yo <- y
+    so <- interp(x=x, y=y, z=z, linear=linear, nx=nlevels, ny=nlevels)
+    x <- so$x; y <- so$y; z <- so$z
+    xlim <- ylim <- range(c(x, y), na.rm = TRUE, finite = TRUE)
+    z[is.infinite(z)] <- NA
+    zlim <- q <- quantile(z, c(.01, .99), na.rm = TRUE) 
+    z[z<=q[1]] <- q[1]
+    z[z>=q[2]] <- q[2]
+    levels <- pretty(zlim, nlevels)
+    col <- hcl.colors(length(levels)-1, "YlOrRd", rev = TRUE)
+    plot.new()
+    plot.window(xlim, ylim, "", xaxs = "i", yaxs = "i", asp = NA)
+    .filled.contour(x, y, z, levels, col)
+    axis(1);axis(2)
+    if (points) 
+      points(xo,yo ,pch=16, cex=.25)
+    box()
+    invisible()
+  }
+
+  par(mfrow=c(2,3))
+  image(x1, x2, truth)
+  contour(x1, x2, truth, nlevels = 15, add = TRUE, drawlabels = FALSE)
+  mtext("Truth")
+  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[1]]$predicted)
+  mtext("hcut=0")
+  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[2]]$predicted)
+  mtext("hcut=1")
+  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[3]]$predicted)
+  mtext("hcut=2")
+  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[4]]$predicted)
+  mtext("hcut=3")
+  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[5]]$predicted)
+  mtext("hcut=4")
+
+}
+
+## ------------------------------------------------------------
+##  friedman illustration of OOB empirical risk
+## ------------------------------------------------------------
+
+## simulate friedman
+n <- 500
+dta <- data.frame(mlbench:::mlbench.friedman1(n, sd=0))
+
+## rf versus rfsgt
+o1 <- rfsgt(y~., dta, hcut=0, tune=TRUE, block.size=1)
+o2 <- rfsgt(y~., dta, hcut=3, tune=TRUE, block.size=1)
+
+## compute running average of OOB empirical risk
+runavg <- function(x, lag = 8) {
+  x <- c(na.omit(x))
+  lag <- min(lag, length(x))
+  cx <- c(0,cumsum(x))
+  rx <- cx[2:lag] / (1:(lag-1))
+  c(rx, (cx[(lag+1):length(cx)] - cx[1:(length(cx) - lag)]) / lag)
+}
+risk1 <- lapply(data.frame(o1$oob.empr.risk), runavg)
+leaf1 <- o1$forest$leafCount
+risk2 <- lapply(data.frame(o2$oob.empr.risk),  runavg)
+leaf2 <- o2$forest$leafCount
+
+## compare OOB empirical tree risk to OOB forest error
+par(mfrow=c(2,2))
+
+plot(c(1,max(leaf1)), range(c(risk1)), type="n",
+     xlab="Tree size", ylab="RF OOB empirical risk")
+l1 <- do.call(rbind, lapply(risk1, function(rsk){
+  lines(rsk,col=grey(0.8))
+  cbind(1:length(rsk), rsk)
+}))
+lines(tapply(l1[,2], l1[,1], mean), lwd=3)
+
+
+plot(c(1,max(leaf2)), range(c(risk2)), type="n",
+     xlab="Tree size", ylab="SGF OOB empirical risk")
+l2 <- do.call(rbind, lapply(risk2, function(rsk){
+  lines(rsk,col=grey(0.8))
+  cbind(1:length(rsk), rsk)
+}))
+lines(tapply(l2[,2], l2[,1], mean), lwd=3)
+
+plot(1:o1$ntree, o1$err.rate, type="s", xlab="Trees", ylab="RF OOB error")
+
+plot(1:o2$ntree, o2$err.rate, type="s", xlab="Trees", ylab="SGF OOB error")
+
+
+## ------------------------------------------------------------
+## synthetic regression examples with different hcut
+## ------------------------------------------------------------
+
+## friedman 1
+d1 <- data.frame(mlbench:::mlbench.friedman1(1000))
+f1 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+   cat("hcut:", hcut, "\n")
+   o <- rfsgt(y~., d1, hcut=hcut)
+   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
+})))
+colnames(f1) <- c("hcut", "mse", "smse")
+
+## friedman 2
+d2 <- data.frame(mlbench:::mlbench.friedman2(1000))
+f2 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+   cat("hcut:", hcut, "\n")
+   o <- rfsgt(y~., d2, hcut=hcut)
+   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
+})))
+colnames(f2) <- c("hcut", "mse", "smse")
+
+## friedman 3
+d3 <- data.frame(mlbench:::mlbench.friedman3(1000))
+f3 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+   cat("hcut:", hcut, "\n")
+   o <- rfsgt(y~., d3, hcut=hcut)
+   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
+})))
+colnames(f3) <- c("hcut", "mse", "smse")
+
+## peak 
+dp <- data.frame(mlbench:::mlbench.peak(1000, 10))
+peak <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+   cat("hcut:", hcut, "\n")
+   o <- rfsgt(y~., dp, hcut=hcut)
+   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
+})))
+colnames(peak) <- c("hcut", "mse", "smse")
+
+## linear model with polynomial terms
+n <- 1000; p <- 10; sd <- .1
+x <- matrix(runif(n*p), n)
+y <- 3 * x[,1]^3 - 2*x[,2]^2 + 3*x[,3] + rnorm(n, sd=sd)
+dl <- data.frame(y=y, x)
+linear <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+  cat("hcut:", hcut, "\n")
+  o <- rfsgt(y~., dl, hcut=hcut)
+  c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
+})))
+colnames(linear) <- c("hcut", "mse", "smse")
+
+## print results
+cat("friedman 1:\n")
+print(f1)
+cat("\n");cat("friedman 2:\n")
+print(f2)
+cat("\n");cat("friedman 3:\n")
+print(f3)
+cat("\n");cat("peak:\n")
+print(peak)
+cat("\n");cat("linear:\n")
+print(linear)
+
+## ------------------------------------------------------------
+## iowa housing data 
+## ------------------------------------------------------------
+
+data(housing, package = "randomForestSRC")
+
+## remove PID 
+housing$PID <- NULL
+
+## rough missing data imputation
+d <- data.frame(randomForestSRC:::get.na.roughfix(data.matrix(housing)))
+d$SalePrice <- log(d$SalePrice)
+d <- data.frame(data.matrix(d))
+
+print(rfsgt(SalePrice~.,d))
+
+## ------------------------------------------------------------
+## high-dimensional linear model
+##
+## filter.rfsgt used by the filter=TRUE option can be used as
+## standalone method for selecting variables
+## ------------------------------------------------------------
+
+## simulate big p small n data
+n <- 50
+p <- 500
+d <- data.frame(y = rnorm(n), x = matrix(rnorm(n * p), n))
+
+## we have a big p small n pure noise setting: let's see how well we do
+cat("variables selected by filter.rfsgt:\n")
+print(filter.rfsgt(y~.,d, method="conserve"))
+
+## ------------------------------------------------------------
+## high-dimensional non-linear model (friedman 1)
+##
+## reduce dimension using filter.rfsgt prior to running the tree
+## ------------------------------------------------------------
+
+## simulate the data
+n <- 100
+p <- 50
+noise <- matrix(runif(n * p), ncol=p)
+dta <- data.frame(mlbench:::mlbench.friedman1(n, sd=0), noise=noise)
+
+## reduce dimension
+nms <- filter.rfsgt(y~., dta)
+
+## run rfsgt with different hcut
+print(rfsgt(y~.,dta, filter=nms, hcut=0))
+print(rfsgt(y~.,dta, filter=nms, hcut=1))
+print(rfsgt(y~.,dta, filter=nms, hcut=2))
+print(rfsgt(y~.,dta, filter=nms, hcut=3))
+print(rfsgt(y~.,dta, filter=nms, hcut=4))
+print(rfsgt(y~.,dta, filter=nms, hcut=5))
+print(rfsgt(y~.,dta, filter=nms, hcut=6))
+
+}
+}
+
+\keyword{rfsgt}
+
+
+
+  
+
+
