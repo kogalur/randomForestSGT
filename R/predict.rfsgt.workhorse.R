@@ -82,7 +82,7 @@ predict.rfsgt.workhorse <-  function(object,
   }
   else {
     object.version <- as.integer(unlist(strsplit(object$version, "[.]")))
-    installed.version <- as.integer(unlist(strsplit("0.0.1.33", "[.]")))
+    installed.version <- as.integer(unlist(strsplit("0.0.1.34", "[.]")))
     minimum.version <- as.integer(unlist(strsplit("0.0.0.0", "[.]")))
     object.version.adj <- object.version[1] + (object.version[2]/10) + (object.version[3]/100)
     installed.version.adj <- installed.version[1] + (installed.version[2]/10) + (installed.version[3]/100)
@@ -292,6 +292,10 @@ predict.rfsgt.workhorse <-  function(object,
     else {
       err.rate  <- NULL
     }
+  }
+  ## add yvar to forest in non-restore mode when y is absent in test data
+  if (!restore.mode && is.null(yvar.newdata)) {
+    object$yvar <- yvar
   }
   ## make the output object
   rfsgtOutput <- list(

@@ -364,7 +364,7 @@ rfsgt.workhorse <- function(formula,
                       ombrCount = nativeOutput$ombrCount,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
-                      version = "0.0.1.33")
+                      version = "0.0.1.34")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL

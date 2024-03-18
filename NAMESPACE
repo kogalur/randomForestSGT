@@ -18,6 +18,7 @@ export(rfsgt,
        print.rfsgt,
        print.vimp.rfsgt,
        rfsgt.news,
+       tune.rfsgt,
        vimp.rfsgt)
 
 

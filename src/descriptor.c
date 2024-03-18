@@ -24,6 +24,7 @@ DescriptorObj *makeDescriptorObj(uint xSize, uint pSize, int descID, char socket
   obj -> nSizeRead = 0;
   obj -> mSize = 0;
   obj -> mIndx = NULL;
+  obj -> nSent = 0;
   obj -> xSize = xSize;
   obj -> pSize = pSize;  
   obj -> augmSize = pSize - xSize;

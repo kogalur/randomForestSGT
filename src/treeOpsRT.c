@@ -177,7 +177,7 @@ void predictForestRT(DescriptorObj *headDO, time_t polling) {
                                      RF_fnodeMembership,
                                      RF_ftTermMembership);
       if (currDO -> userState == SG_DESC_PREDICTING) {
-        currDO -> userState = SG_DESC_WRITING;
+        currDO -> userState = SG_DESC_POSTPREDICTING;
       }
       else {
       }

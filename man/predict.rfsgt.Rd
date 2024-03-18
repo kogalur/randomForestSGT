@@ -1,5 +1,6 @@
 \name{predict.rfsgt}
 \alias{predict.rfsgt}
+\alias{tune.rfsgt}
 \title{Prediction on Test Data for Super Greedy Forests}
 
 \description{
@@ -66,11 +67,29 @@
 \donttest{
 ## ------------------------------------------------------------
 ##
-## restore a trained super greedy forest  
+## train/test using friedman 3
 ##
 ## ------------------------------------------------------------
 
-## rfsgt applied to boston housing data
+## train sgf on friedman 3
+d.trn <- data.frame(mlbench:::mlbench.friedman3(500))
+o <- rfsgt(y~.,d.trn, hcut=1)
+print(o)
+
+## test sgf
+d.tst <- data.frame(mlbench:::mlbench.friedman3(1000))
+y.tst <- d.tst$y
+x.tst <- d.tst[, colnames(d.tst)!= "y"]
+yhat <- predict(o, x.tst)$predicted
+cat("test set mse:", mean((yhat - y.tst)^2), "\n")
+
+## ------------------------------------------------------------
+##
+## restore a trained super greedy forest using boston
+##
+## ------------------------------------------------------------
+
+## run sgf on boston
 data(BostonHousing, package = "mlbench")
 o <- rfsgt(medv~., BostonHousing)
 print(o)
@@ -109,6 +128,15 @@ print(pred)
 ## coherence check
 cat("coherence for inbag data:", sum(pred$pred.inb-pred$pred.test,na.rm=TRUE)==0, "\n")
 cat("  coherence for oob data:", sum(pred$pred.oob-pred$pred.test,na.rm=TRUE)==0, "\n")
+
+
+## ------------------------------------------------------------
+##
+## use 10-fold validation to tune hcut
+##
+## ------------------------------------------------------------
+
+print(tune.rfsgt(y~., data.frame(mlbench:::mlbench.friedman3(500)), hcut=5))
 
 
 }

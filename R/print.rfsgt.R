@@ -5,15 +5,18 @@ print.rfsgt <- function(x, ...) {
     stop("This function only works for objects of class `(rfsgt, grow)' or '(rfsgt, predict)'")
   }
   ## error rate
-  if (x$family == "regr") {
+  err.rate <- serr.rate <- r.squared <- NULL
+  if (x$family == "regr" && !is.null(x$yvar)) {
     err.rate <- tail(x$err.rate, 1)
-    serr.rate <- err.rate / var(x$yvar, na.rm = TRUE)
-    r.squared <- 1 - err.rate / var(x$yvar, na.rm = TRUE)
+    var.y <- var(x$yvar, na.rm = TRUE)
+    serr.rate <- err.rate / var.y
+    r.squared <- 1 - err.rate / var.y
   }
   ## nodesize + dimension
   arr <- x$forest$nativeArray[x$forest$nativeArray$brnodeID==0,, drop = FALSE]
   nodeSZ <- mean(tapply(arr$nodeSZ, arr$treeID, mean, na.rm = TRUE), na.rm = TRUE)
-  hcut.dim <- sum(!(colnames(arr) %in% c("treeID", "nodeID", "nodeSZ", "brnodeID", "betaZ", "yStar", "yBar")))
+  hcut.dim <- sum(!(colnames(arr) %in%
+                  c("treeID", "nodeID", "nodeSZ", "brnodeID", "betaZ", "yStar", "yBar")))
   ## output 
   cat("                         Sample size: ", x$n,                                  "\n", sep="")
   cat("                    Tree sample size: ", x$sampsize,                           "\n", sep="")
@@ -25,7 +28,9 @@ print.rfsgt <- function(x, ...) {
   cat("                           Splitrule: ", x$splitrule,                          "\n", sep="")
   cat("                                hcut: ", x$hcut,                               "\n", sep="")
   cat("                      hcut-dimension: ", hcut.dim,                             "\n", sep="")
-  cat("                       OOB R-squared: ", r.squared,                            "\n", sep="")
-  cat("         OOB standardized error rate: ", serr.rate,                            "\n", sep="")
-  cat("                      OOB error rate: ", err.rate,                             "\n", sep="")
+  if (!is.null(x$yvar)) {
+    cat("                       OOB R-squared: ", r.squared,                            "\n", sep="")
+    cat("         OOB standardized error rate: ", serr.rate,                            "\n", sep="")
+    cat("                      OOB error rate: ", err.rate,                             "\n", sep="")
+  }
 }

@@ -30,7 +30,7 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
   struct sockaddr_in addr;
   struct timeval timeout;
   fd_set master_set, working_set;
-  uint16_t nboLength;
+  uint16_t nboLength, hboLength;
   char serverExit;
   char closeConn;
   int listen_i;
@@ -240,13 +240,50 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
                   ctrlID = SG_TCP_CTRL_ACK;
                   headDO -> userState = SG_DESC_CLOSED;
                 }
+                else if (currDO -> record[0] == SG_TCP_CTRL_TSZ) {
+                  if (currDO -> userState == SG_DESC_POSTPREDICTING) {
+                    hboLength = currDO -> nSize;
+                    nboLength = htons(hboLength);
+                    result = send(listen_i, &nboLength, sizeof(uint16_t), 0);
+                    if (result == -1) {
+                    }
+                    else if (result == 0) {
+                    }
+                    else if (result == sizeof(uint16_t)) {
+                      currDO -> userState = SG_DESC_PREWRITING;
+                    }
+                    else {
+                    }
+                  }
+                }
                 else {
                 }
-                result = serverSend(listen_i, &ctrlID, 1);
-                if (result < 0) {
-                  closeConn = TRUE;
+                if (!(currDO -> record[0] == SG_TCP_CTRL_TSZ)) {
+                  result = serverSend(listen_i, &ctrlID, 1);
+                  if (result < 0) {
+                    closeConn = TRUE;
+                  }
                 }
-                if (ctrlID == SG_DESC_POSTREAD) {
+                if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_PREWRITING))) {
+                  currDO -> userState = SG_DESC_WRITING;
+                }
+                if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_WRITING))) {
+                  struct resultOfPrediction resultObj;
+                  uint32_t nbo_recordID;
+                  float   hbo_fltValue;
+                  (currDO -> nSent) ++;
+                  nbo_recordID = htonl(currDO -> nSent);
+                  resultObj.recordID = nbo_recordID;
+                  uint32_t *hbo_intValuePtr;
+                  hbo_fltValue = 0.0123456;
+                  hbo_intValuePtr = (uint32_t *) & hbo_fltValue;
+                  resultObj.intValue = htonl(*hbo_intValuePtr);
+                  send(listen_i, (char *) &resultObj, sizeof(resultObj), 0);
+                  if (currDO -> nSent == currDO -> nSize) {
+                    resetDescriptorObj(currDO, SG_SOCK_STATE_OPN);
+                  }
+                }
+                if (((currDO -> record[0] == SG_TCP_CTRL_EOF) && ((currDO -> userState) == SG_DESC_READING))) {
 #ifdef _OPENMP
                   omp_set_lock(&SG_lockDO);
 #endif
@@ -254,9 +291,6 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
 #ifdef _OPENMP
                   omp_unset_lock(&SG_lockDO);
 #endif
-                }
-                if (ctrlID == SG_DESC_WRITING) {
-                  resetDescriptorObj(currDO, SG_SOCK_STATE_OPN);
                 }
               }  
               else {

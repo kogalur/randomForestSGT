@@ -466,7 +466,7 @@ char sgtMain(char mode, int seedValue) {
                                                 RF_fobservationSize,
                                                 RF_fobservationIn,
                                                 SG_fobservationInAugm,
-                                                RF_fresponseIn[rTarget]);
+                                                (RF_fresponseIn == NULL) ? NULL: RF_fresponseIn[rTarget]);
           }
           if (mode == RF_GROW) {
             if (RF_opt & OPT_TREE) {
