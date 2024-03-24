@@ -11,6 +11,11 @@
 #define SG_DESC_PREWRITING      0x27
 #define SG_DESC_WRITING         0x28
 #define SG_DESC_POSTWRITING     0x29
+typedef struct predictorPacket PredictorPacket;
+struct predictorPacket {
+  uint32_t recordID;
+  uint32_t intValue;
+};
 typedef struct descriptorObj DescriptorObj;
 struct descriptorObj {
   int descID;
@@ -34,6 +39,7 @@ struct descriptorObj {
   double  *fyArrayIn;
   char userState;
   char socketState;
+  PredictorPacket *yHatPacket;
 };
 DescriptorObj *makeDescriptorObj(uint xSize, uint pSize, int descID, char sockState);
 void setDescriptorObj(DescriptorObj *obj, uint nSizeAlloc, char respInFlag);

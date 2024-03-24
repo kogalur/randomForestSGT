@@ -7,6 +7,10 @@ predict.rfsgt.workhorse <-  function(object,
                                      do.trace = FALSE,
                                      ...)
 {
+  ## confirm this is a rfsgt object
+  if (!inherits(object, "rfsgt")) {
+    stop("this function only works for objects of class 'rfsgt'")
+  }
   ## hidden options (used later)
   dots <- list(...)
   ## initialize the seed
@@ -82,7 +86,7 @@ predict.rfsgt.workhorse <-  function(object,
   }
   else {
     object.version <- as.integer(unlist(strsplit(object$version, "[.]")))
-    installed.version <- as.integer(unlist(strsplit("0.0.1.34", "[.]")))
+    installed.version <- as.integer(unlist(strsplit("0.0.1.37", "[.]")))
     minimum.version <- as.integer(unlist(strsplit("0.0.0.0", "[.]")))
     object.version.adj <- object.version[1] + (object.version[2]/10) + (object.version[3]/100)
     installed.version.adj <- installed.version[1] + (installed.version[2]/10) + (installed.version[3]/100)

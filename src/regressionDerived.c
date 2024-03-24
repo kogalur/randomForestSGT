@@ -195,3 +195,33 @@ void restoreMeanResponseCDL(uint treeID, Terminal *term) {
     }
   }
 }
+void updateEnsembleMeanRT(uint treeID) {
+  uint    *membershipIndex;
+  uint     membershipSize;
+  double    **ensembleRGRnum;
+  double     *ensembleDen;
+  double   *yHatAbsolute;
+  uint     i, ii;
+#ifdef _OPENMP
+  omp_lock_t   *lockDENptr;
+#endif
+  yHatAbsolute = SG_yHatAbsoluteTest[treeID];
+  ensembleRGRnum = SG_cdl_fullEnsembleRGRnum;
+  ensembleDen    = RF_fullEnsembleDen;
+  membershipSize = RF_fobservationSize;
+  membershipIndex = RF_fidentityMembershipIndex;
+#ifdef _OPENMP
+  lockDENptr      = RF_lockDENfens;
+#endif
+  for (i = 1; i <= membershipSize; i++) {
+    ii = membershipIndex[i];
+#ifdef _OPENMP
+    omp_set_lock(&(lockDENptr[ii]));
+#endif
+    ensembleDen[ii] ++;
+    ensembleRGRnum[1][ii] += yHatAbsolute[ii];
+#ifdef _OPENMP
+    omp_unset_lock(&(lockDENptr[ii]));
+#endif
+  }  
+}

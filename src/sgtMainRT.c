@@ -391,6 +391,7 @@ char sgtMainRT(char mode, int seedValue) {
                                                              RF_responseIn[rTarget]);
           free_cvector(perm, 1, RF_xSize);
           stackForestObjectsAuxOnlySGT();
+          SG_yHatAbsolute = (double **) new_vvector(1, RF_ntree, NRUTIL_DPTR);
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(RF_numThreads) if (SG_threadV == SG_THREADV_NTREE)
 #endif
@@ -407,6 +408,7 @@ char sgtMainRT(char mode, int seedValue) {
           }
           freeDescriptorObj(SG_headDO);
           free_new_vvector(SG_yHatAbsoluteTest, 1, RF_ntree, NRUTIL_DPTR);
+          free_new_vvector(SG_yHatAbsolute, 1, RF_ntree, NRUTIL_DPTR);
           for (bb = 1; bb <= RF_getTreeCount; bb++) {
             unstackMembershipVectors(SG_augmObjCommon -> nSize,
                                      RF_identityMembershipIndexSize,

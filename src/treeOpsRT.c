@@ -20,9 +20,9 @@
 #include "greedyInfo.h"
 #include "splitGreedy.h"
 #include "splitRegr.h"
-#include "processEnsemble.h"
 #include "descriptor.h"
 #include "server.h"
+#include "regressionDerived.h"
 #include "shared/stackMembershipVectors.h"
 #include "shared/stackPreDefined.h"
 #include "shared/terminalBase.h"
@@ -131,6 +131,7 @@ void acquireTreeRT(char mode, uint treeID) {
 void predictForestRT(DescriptorObj *headDO, time_t polling) {
   DescriptorObj *currDO;
   uint bb;
+  uint i;
   char alive;
   alive = TRUE;
   while (alive) {
@@ -163,12 +164,27 @@ void predictForestRT(DescriptorObj *headDO, time_t polling) {
                                    & RF_fidentityMembershipIndex,
                                    & RF_fnodeMembership,
                                    &RF_ftTermMembership);
+      RF_fullEnsembleDen = dvector(1, RF_fobservationSize);
+      for (uint i = 1; i <= RF_fobservationSize; i++) {
+        RF_fullEnsembleDen[i] = 0.0;
+      }
+      SG_cdl_fullEnsembleRGRnum = (double **) new_vvector(1, 1, NRUTIL_DPTR);
+      SG_cdl_fullEnsembleRGRnum[1] = dvector(1, RF_fobservationSize);
+      for (uint i = 1; i <= RF_fobservationSize; i++) {
+        SG_cdl_fullEnsembleRGRnum[1][i] = 0.0;
+      }
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(RF_numThreads - 2)
 #endif
       for (bb = 1; bb <= RF_getTreeCount; bb++) {
         predictTreeRT(RF_getTreeIndex[bb]);
       }
+      for (i = 1; i <= currDO -> nSize; i++) {
+        currDO -> yHat[i] = SG_cdl_fullEnsembleRGRnum[1][i] / RF_fullEnsembleDen[i];
+      }
+      free_dvector(RF_fullEnsembleDen, 1, RF_fobservationSize);
+      free_dvector(SG_cdl_fullEnsembleRGRnum[1], 1, RF_fobservationSize);
+      free_new_vvector(SG_cdl_fullEnsembleRGRnum, 1, 1, NRUTIL_DPTR);
       freeAugmentationObjCommonGenericTestOnly(SG_augmObjCommon);
       unstackPreDefinedPredictArrays(RF_ntree,
                                      RF_fobservationSize,
@@ -206,6 +222,7 @@ void predictTreeRT(uint treeID) {
   root -> testMembrSize = root -> testMembrSizeAlloc = RF_fobservationSize;
   root -> testMembrIndx = RF_fidentityMembershipIndex;
   getTestMembershipLOT(treeID, root);
+  updateEnsembleMeanRT(treeID);
   root -> testMembrIndx = NULL;
   root -> testMembrSize = root -> testMembrSizeAlloc = 0;
   freeTestMembership(treeID, (NodeBase *) root);

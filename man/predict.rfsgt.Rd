@@ -136,7 +136,14 @@ cat("  coherence for oob data:", sum(pred$pred.oob-pred$pred.test,na.rm=TRUE)==0
 ##
 ## ------------------------------------------------------------
 
-print(tune.rfsgt(y~., data.frame(mlbench:::mlbench.friedman3(500)), hcut=5))
+## fit the forest to the tuned hcut
+dta <- data.frame(mlbench:::mlbench.friedman3(500))
+f <- tune.rfsgt(y~., dta, hcut=5, verbose=TRUE)
+o <- rfsgt(y~., dta, filter=f)
+print(o)
+
+## test the tuned forest on new data
+print(predict(o, data.frame(mlbench:::mlbench.friedman3(25000))))
 
 
 }

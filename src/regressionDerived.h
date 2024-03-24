@@ -4,4 +4,5 @@
 void calculateMeanResponseCDL(uint treeID, Terminal *term);
 void restoreMeanResponseCDL(uint treeID, Terminal *term);
 void updateEnsembleMeanCDL(char mode, uint treeID);
+void updateEnsembleMeanRT(uint treeID);
 #endif

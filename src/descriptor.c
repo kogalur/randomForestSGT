@@ -35,6 +35,7 @@ DescriptorObj *makeDescriptorObj(uint xSize, uint pSize, int descID, char socket
   obj -> userState = SG_DESC_OPENED;
   obj -> descID = descID;
   obj -> socketState = socketState;
+  obj -> yHatPacket = (PredictorPacket *) gblock((size_t) sizeof(PredictorPacket));  
   return obj;
 }
 void setDescriptorObj(DescriptorObj *obj, uint nSizeAlloc, char respInFlag) {
@@ -56,6 +57,11 @@ void setDescriptorObj(DescriptorObj *obj, uint nSizeAlloc, char respInFlag) {
   obj -> yHat = dvector(1, obj -> nSizeAlloc);
   obj -> nIndx = uivector(1, obj -> nSizeAlloc);
   obj -> mIndx = uivector(1, obj -> nSizeAlloc);
+  for (i = 1; i <= obj -> nSizeAlloc; i++) {
+    obj -> yHat[i] = RF_nativeNaN;
+    obj -> nIndx[i] = 0;
+    obj -> mIndx[i] = 0;
+  }
 }
 void resetDescriptorObj(DescriptorObj *obj, char socketState) {
   uint i;
@@ -124,6 +130,7 @@ void freeDescriptorObj(DescriptorObj *obj) {
   if (obj -> mIndx != NULL) {
     free_uivector(obj -> mIndx, 1, obj -> nSizeAlloc);
   }
+  free_gblock(obj -> yHatPacket, sizeof(PredictorPacket));
   free_gblock(obj, sizeof(DescriptorObj));
 }
 uint unlinkUnheldDescriptors(DescriptorObj *headDO, DescriptorObj **tailDO, char force) {

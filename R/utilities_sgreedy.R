@@ -179,8 +179,7 @@ get.splitinfo <- function(formula.detail, splitrule, hcut, nsplit, nfolds) {
                        "cart.regr",           ##  3
                        "cart.class",          ##  4
                        "cart.random",         ##  5
-                       "tdc",                 ##  6  
-                       "sg.regr2")            ##  7
+                       "sg.tdc")              ##  6  
   ## set the family
   fmly <- formula.detail$family
   ## set hcut
@@ -189,7 +188,7 @@ get.splitinfo <- function(formula.detail, splitrule, hcut, nsplit, nfolds) {
   if (!is.null(splitrule)) {
     splitrule <- match.arg(splitrule, splitrule.names)
     ## cart splitting --> hcut is zero
-    if (grepl("cart", splitrule)) {
+    if (grepl("cart", splitrule) || (splitrule == "sg.tdc")) {
       hcut <- 0
     }
   }
@@ -200,6 +199,22 @@ get.splitinfo <- function(formula.detail, splitrule, hcut, nsplit, nfolds) {
       }
       if (fmly == "regr") {
         splitrule <- "cart.regr"
+      }
+    }
+  }
+  ## survival tdc --> 
+  if (fmly == "surv") {
+    if (is.null(splitrule)) {
+      splitrule.idx <- which(splitrule.names == "sg.tdc")
+      splitrule <- splitrule.names[splitrule.idx]
+    }
+    else {
+      splitrule.idx <- which(splitrule.names == splitrule)
+      if (length(splitrule.idx) != 1) {
+        stop("invalid split rule specified for survival tdc:  ", splitrule)
+      }
+      if (splitrule != "sg.tdc") {
+        stop("invalid split rule specified for regression:  ", splitrule)
       }
     }
   }
@@ -271,7 +286,9 @@ make.baselearner <- function (x,
                               max.three = 60,
                               max.four = 30,
                               pretty.names = TRUE,
-                              standardize = FALSE) {
+                              standardize = FALSE,
+                              sqchar = "_SQ2_",
+                              ichar = "_I_") {
   ## colnames for x
   if (!pretty.names) {
     xnms <- 1:ncol(x)
@@ -291,7 +308,7 @@ make.baselearner <- function (x,
   }
   ## hcut = 2: + quadratic
   xmod <- cbind(x, x^2)
-  xsqnms <- paste0(xnms, "sq2")
+  xsqnms <- paste0(xnms, sqchar)
   colnames(xmod) <- c(xnms, xsqnms) 
   ## hcut = 3: + pair interactions
   ## higher order interactions (2x) not allowed if p is too high
@@ -301,10 +318,10 @@ make.baselearner <- function (x,
     }))
     nm <- unlist(lapply(combn(xnms, 2, simplify = FALSE), function(j) {
       if (!pretty.names) {
-        paste("two.", paste(j, collapse = "."), sep = "")
+        paste("two", ichar, paste(j, collapse = ichar), sep = "")
       }
       else {
-        paste(j, collapse = ".")
+        paste(j, collapse = ichar)
       }
     }))
     colnames(two) <- nm
@@ -317,7 +334,7 @@ make.baselearner <- function (x,
       xmod[, xnms[j]] * xmod[,  xsqnms]
     }))
     nm <- unlist(lapply(1:length(xnms), function(j) {
-      paste(paste0(xnms[j], "."), xsqnms, sep="")
+      paste(paste0(xnms[j], ichar), xsqnms, sep="")
     }))
     colnames(poly3) <- nm
     xmod <- cbind(xmod, poly3)
@@ -329,7 +346,7 @@ make.baselearner <- function (x,
       xmod[, xsqnms[j]] * xmod[, colnames(two)]
     }))
     nm <- unlist(lapply(1:length(xsqnms), function(j) {
-      paste(paste0(xsqnms[j], "."), colnames(two), sep="")
+      paste(paste0(xsqnms[j], ichar), colnames(two), sep="")
     }))
     colnames(poly4) <- nm
     xmod <- cbind(xmod, poly4)
@@ -342,10 +359,10 @@ make.baselearner <- function (x,
     }))
     nm <- unlist(mclapply(combn(xnms, 3, simplify = FALSE), function(j) {
       if (!pretty.names) {
-        paste("three.", paste(j, collapse = "."), sep = "")
+        paste("three", "ichar", paste(j, collapse = ichar), sep = "")
       }
       else {
-        paste(j, collapse = ".")
+        paste(j, collapse = ichar)
       }
     }))
     colnames(three) <- nm
@@ -359,10 +376,10 @@ make.baselearner <- function (x,
     }))
     nm <- unlist(mclapply(combn(xnms, 4, simplify = FALSE), function(j) {
       if (!pretty.names) {
-        paste("four.", paste(j, collapse = "."), sep = "")
+        paste("four", ichar, paste(j, collapse = ichar), sep = "")
       }
       else {
-        paste(j, collapse = ".")
+        paste(j, collapse = ichar)
       }
     }))
     colnames(four) <- nm

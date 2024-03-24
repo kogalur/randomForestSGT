@@ -31,6 +31,9 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
   struct timeval timeout;
   fd_set master_set, working_set;
   uint16_t nboLength, hboLength;
+  uint32_t nbo_recordID;
+  float hbo_fltValue;
+  uint32_t *hbo_intValuePtr;
   char serverExit;
   char closeConn;
   int listen_i;
@@ -86,6 +89,7 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
   timeout.tv_sec  = userTimeout;
   timeout.tv_usec = 0;
   serverExit = FALSE;
+  hbo_intValuePtr = (uint32_t *) & hbo_fltValue;
   do {
     memcpy(&working_set, &master_set, sizeof(master_set));
     result = select(max_sd + 1, &working_set, NULL, NULL, &timeout);
@@ -268,17 +272,12 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
                   currDO -> userState = SG_DESC_WRITING;
                 }
                 if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_WRITING))) {
-                  struct resultOfPrediction resultObj;
-                  uint32_t nbo_recordID;
-                  float   hbo_fltValue;
                   (currDO -> nSent) ++;
-                  nbo_recordID = htonl(currDO -> nSent);
-                  resultObj.recordID = nbo_recordID;
-                  uint32_t *hbo_intValuePtr;
-                  hbo_fltValue = 0.0123456;
-                  hbo_intValuePtr = (uint32_t *) & hbo_fltValue;
-                  resultObj.intValue = htonl(*hbo_intValuePtr);
-                  send(listen_i, (char *) &resultObj, sizeof(resultObj), 0);
+                  nbo_recordID = htonl(currDO -> nIndx[currDO -> nSent]);
+                  currDO -> yHatPacket -> recordID = nbo_recordID;
+                  hbo_fltValue = (float) currDO -> yHat[currDO -> nSent];
+                  currDO -> yHatPacket -> intValue = htonl(*hbo_intValuePtr);
+                  send(listen_i, (char *) (currDO -> yHatPacket), sizeof(currDO -> yHatPacket), 0);
                   if (currDO -> nSent == currDO -> nSize) {
                     resetDescriptorObj(currDO, SG_SOCK_STATE_OPN);
                   }

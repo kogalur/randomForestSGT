@@ -19,8 +19,4 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
 int serverSend(int clientSockFD, char *record, int length);
 int flushReadBuffer(int clientSockFD, DescriptorObj *currDO, char *closeConn);
 extern void predictForestRT();
-struct resultOfPrediction {
-  uint32_t recordID;
-  uint32_t intValue;
-};
 #endif

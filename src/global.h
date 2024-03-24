@@ -53,8 +53,7 @@
 #define REGR_CRT   3
 #define CLAS_CRT   4
 #define RAND_CRT   5
-#define SURV_XXX   6
-#define REGR_CDL2  7
+#define SURV_SG_TDC 6
 #define ROOT 0x00
 #define OUTC_CART   0x01
 #define OUTC_LASSO  0x02

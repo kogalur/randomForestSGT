@@ -8,7 +8,9 @@ get.hotencode <- function(x, papply = mclapply) {
       xn <- factor(x[, nn])
       ## one-level factors are converted to zero
       if (length(levels(xn)) == 1) {
-        rep(0, length(xn))
+        xn <- data.frame(rep(0, length(xn)))
+        colnames(xn) <- nn
+        xn
       }
       ## two-level factors are converted to binary
       else if (length(levels(xn)) == 2) {
@@ -77,9 +79,11 @@ get.hotencode.test <- function(x, xtest, papply = mclapply, raw = FALSE) {
     ## - factors get coded as before -> with potentially additional columns
     ## - for binary factors -> makes a fake integer value > 1
     xn <- factor(xn, levels = c(trn.labels, setdiff(tst.labels, trn.labels)))
-    ## one-level factors are converted to zero
+    ## one-level factors are converted to zero 
     if (length(trn.labels) == 1) {
-      rep(0, length(xn))
+      xn <- data.frame(rep(0, length(xn)))
+      colnames(xn) <- nn
+      xn
     }
     ## two-level factors are converted to binary
     else if (length(trn.labels) == 2) {

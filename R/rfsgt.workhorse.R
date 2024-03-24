@@ -33,7 +33,7 @@ rfsgt.workhorse <- function(formula,
   xvar.org.names <- formula.detail$xvar.names
   yvar.names <- formula.detail$yvar.names
   ## coherence check
-  if (!(family == "regr")) {
+  if (!((family == "regr") || (family == "surv"))) {
     stop("this function (currently) only works for regression")
   }
   if (length(xvar.org.names) == 0) {
@@ -55,28 +55,41 @@ rfsgt.workhorse <- function(formula,
   nfolds <- splitinfo$nfolds
   ## user specified filter variable list?
   keep.filter <- xvar.org.names
-  if (is.character(filter)) {
+  user.filter.flag <- FALSE
+  if (is.character(filter) && !inherits(filter, "tune.rfsgt")) {
+    user.filter.flag <- TRUE
     keep.filter <- xvar.org.names[sapply(xvar.org.names, function(xv) {any(grepl(xv, filter))})]    
     if (length(keep.filter) == 0) {
-      stop("user specified filering variables do not match original xvariable names\n")
+      stop("user specified filtering variables do not match original xvariable names\n")
     }
   }
   ## hot-encode x 
   xvar <- get.hotencode(data[, keep.filter, drop = FALSE])
   ## don't need the data anymore
   remove(data)
+  ## dimension reduction using tune.rfsgt filtering variables
+  baselearner.flag <- TRUE
+  augmentX <- augmentXlist <- hcutCnt <- NULL
+  if (is.character(filter) && inherits(filter, "tune.rfsgt")) {
+    user.filter.flag <- TRUE
+    baselearner.flag <- FALSE
+    hcut <- attr(filter, "hcut")
+    o.base <- make.filter.baselearner(xvar, filter)
+    xvar <- o.base$x[, o.base$xvar.names, drop = FALSE]
+    hcutCnt <- ncol(xvar)
+    if (length(o.base$xvar.augment.names) > 0) {
+      augmentX <- o.base$x[, o.base$xvar.augment.names, drop = FALSE]
+      augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
+      hcutCnt <- hcutCnt + ncol(augmentX)
+    }
+  }
   ## dimension reduction using custom filtering via vimp.rfsgt
-  filter.flag <- FALSE
-  #if ((is.logical(filter) && filter == TRUE) || is.character(filter)) {
-  if ((is.logical(filter) && filter == TRUE)) {
-    filter.flag <- TRUE
+  custom.filter.flag <- FALSE
+  if (!user.filter.flag && filter == TRUE) {
+    custom.filter.flag <- TRUE
     df <- data.frame(yvar, xvar)
     colnames(df) <- c(yvar.names, colnames(xvar))
     keep.custom.filter <- filter.custom.rfsgt(formula, df, hcut=hcut, method="liberal", fast=fast)
-    ## keep the filter variables that the user supplied - does not make sense to remove them
-    #if (is.character(filter)) {
-    #  keep.custom.filter <- unique(c(colnames(xvar), keep.custom.filter))
-    #}
     if (sum(colnames(xvar) %in% keep.custom.filter) > 0) {
       xvar <- xvar[, colnames(xvar) %in% keep.custom.filter, drop = FALSE]
     }
@@ -89,16 +102,17 @@ rfsgt.workhorse <- function(formula,
   xvar.types <- rep("R", n.xvar)
   xvar.nlevels <- rep(0, n.xvar)
   xvar.numeric.levels <- NULL
+  if (is.null(hcutCnt)) {
+    hcutCnt <- n.xvar
+  }
   ## augmented x: calls baselearner and removes original variables
   ## filtering is then applied if user has requested it
-  augmentX <- augmentXlist <-NULL
-  hcutCnt <- n.xvar
-  if (hcut > 1) {
+  if (hcut > 1 && baselearner.flag) {
     augmentX <- make.baselearner(xvar, hcut)[, -(1:n.xvar), drop = FALSE]
-    if (filter.flag) {
+    if (custom.filter.flag) {
       if (sum(colnames(augmentX) %in% keep.custom.filter) > 0) {
         augmentX <- augmentX[, colnames(augmentX) %in% keep.custom.filter, drop = FALSE]
-        hcutCnt <- n.xvar + ncol(augmentX)
+        hcutCnt <- hcutCnt + ncol(augmentX)
         augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
       }
       else {
@@ -108,7 +122,7 @@ rfsgt.workhorse <- function(formula,
       }
     }
     else {
-      hcutCnt <- n.xvar + ncol(augmentX)
+      hcutCnt <- hcutCnt + ncol(augmentX)
       augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
     }
   }
@@ -364,7 +378,7 @@ rfsgt.workhorse <- function(formula,
                       ombrCount = nativeOutput$ombrCount,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
-                      version = "0.0.1.34")
+                      version = "0.0.1.37")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL
