@@ -46,8 +46,9 @@
 #define SG_OMBR_TN_CT    26  
 #define SG_RMBR_TN_ID    27  
 #define SG_OMBR_TN_ID    28  
-#define SG_OPT_LO_GROW   29  
-#define SG_OPT_HI_GROW   30  
+#define SG_AMBR_TN_ID    29  
+#define SG_OPT_LO_GROW   30  
+#define SG_OPT_HI_GROW   31  
 #define REGR_CDL   1
 #define CLAS_CDL   2
 #define REGR_CRT   3

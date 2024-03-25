@@ -378,7 +378,8 @@ rfsgt.workhorse <- function(formula,
                       ombrCount = nativeOutput$ombrCount,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
-                      version = "0.0.1.37")
+                      ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
+                      version = "0.0.1.38")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL

@@ -105,7 +105,6 @@ SEXP entryGrow(SEXP traceFlag,
       SG_lotCutMax4         = INTEGER(VECTOR_ELT(lot, 6))[0];
     }
   }
-  RF_nativePrint("\n TEST 10:  ");
   RF_rTargetCount         = INTEGER(VECTOR_ELT(yTarget, 0))[0];
   if (VECTOR_ELT(yTarget, 1) != R_NilValue) {
     RF_rTarget         = (uint *) INTEGER(VECTOR_ELT(yTarget, 1));

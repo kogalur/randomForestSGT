@@ -23,7 +23,7 @@ char  *SG_sexpStringOutgoingCDL[10] = {
   "lambdaMeanErr", 
   "lambdaCVSD"     
 };
-char  *SG_sexpStringOutgoing[31] = {
+char  *SG_sexpStringOutgoing[32] = {
   "cTimeInternal",  
   "nodeMembership", 
   "bootstrapCount", 
@@ -53,6 +53,7 @@ char  *SG_sexpStringOutgoing[31] = {
   "ombrCount",      
   "rmbrIdent",      
   "ombrIdent",      
+  "ambrOffset",     
   "optLoGrow",      
   "optHiGrow"       
 };

@@ -28,6 +28,7 @@ void calculateMeanResponseCDL(uint treeID, Terminal *term) {
   uint  allMembrSize;
   uint *allMembrIndx;
   uint *oobMembrIndx;
+  uint *ibgMembrIndx;
   double *yArray;
   double *yHatAbsolute;
   uint i;
@@ -40,11 +41,16 @@ void calculateMeanResponseCDL(uint treeID, Terminal *term) {
   term -> allMembrSize = allMembrSize;
   term -> oobMembrCount = 0;
   term -> oobMembrIndx = uivector(1, allMembrSize);
+  term -> ibgMembrIndx = uivector(1, allMembrSize);
   oobMembrIndx = term -> oobMembrIndx;
+  ibgMembrIndx = term -> ibgMembrIndx;
   for (i = 1; i <= allMembrSize; i++) {
     if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
       oobMembrIndx[++ (term -> oobMembrCount)] = allMembrIndx[i];
     }
+  }
+  for (i = 1; i <= parentBase -> repMembrSize; i++) {
+    ibgMembrIndx[i] = parentBase -> repMembrIndx[i];
   }
   term -> mean = parent -> mean;
   if (SG_optLocal & SG_OPT_SWTCH_SIX) {

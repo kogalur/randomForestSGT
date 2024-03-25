@@ -39,6 +39,7 @@ void freeTerminalDerived(void *parent) {
   deinitTerminalBase((TerminalBase*) parent);
   if (((Terminal *) parent) -> allMembrSize > 0) {
     free_uivector(((Terminal *) parent) -> oobMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
+    free_uivector(((Terminal *) parent) -> ibgMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
   }
   free_gblock(parent, (size_t) sizeof(Terminal));
 }

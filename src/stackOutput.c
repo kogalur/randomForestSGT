@@ -227,7 +227,7 @@ void stackDefinedOutputObjects(char mode) {
       }
       if ((SG_hcut == 0) || (SG_hcut >= 1)) {
         RF_stackCount += 1;
-        RF_stackCount += 14;
+        RF_stackCount += 15;
       }
     }
     if (RF_opt & OPT_EMPR_RISK) {
@@ -704,17 +704,32 @@ void stackForestObjectsOutput(char mode) {
         localSize += RF_oobSize[treeID];
       }
       SG_ombrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_OMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
+      localSize = (ulong) RF_ntree * RF_observationSize;
+      SG_ambrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_AMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, &SG_ambrTNodeID_ptr, 2, RF_ntree, RF_observationSize);
       SG_rmbrTNodeID_ --;
       SG_ombrTNodeID_ --;
+      SG_ambrTNodeID_ --;
 }
 void writeForestObjectsOutput(char mode) {
+  LeafLinkedObj **leafLinkedObjMap;
+  LeafLinkedObj  *leafLinkedPtr;
+  Terminal *termPtr;
+  uint      nodeID;
+  uint      genMembrSize;
+  uint     *genMembrIndx;
   uint offset, offsetCT, offsetID_rmbr, offsetID_ombr;
   uint treeID;
-  uint j, k;
+  uint i, j, k;
       offset = 0;
       offsetCT = 0;
       offsetID_rmbr = offsetID_ombr = 0;
       for (treeID = 1; treeID <= RF_ntree; treeID++) {
+        leafLinkedObjMap = (LeafLinkedObj **) new_vvector(1, RF_tLeafCount[treeID], NRUTIL_LEAFPTR2);
+        leafLinkedPtr = RF_leafLinkedObjHead[treeID] -> fwdLink;
+        while (leafLinkedPtr != NULL) {
+          leafLinkedObjMap[leafLinkedPtr -> nodeID] = leafLinkedPtr;
+          leafLinkedPtr = leafLinkedPtr -> fwdLink;
+        }
         for (k = 1; k <= RF_nodeCount[treeID]; k++) {
           offset ++;
           SG_treeID_[offset]   = SG_treeID_ptr[treeID][k];
@@ -726,6 +741,20 @@ void writeForestObjectsOutput(char mode) {
           SG_yBar_[offset]     = SG_yBar_ptr[treeID][k];
           SG_yStar_[offset]    = SG_yStar_ptr[treeID][k];          
           SG_betaZ_[offset]    = SG_betaZ_ptr[treeID][k];
+          if (SG_brnodeID_[offset] == 0) {
+            nodeID = SG_nodeID_[offset];
+            termPtr = (Terminal *) (leafLinkedObjMap[nodeID] -> termPtr);
+            genMembrSize = termPtr -> oobMembrCount;
+            genMembrIndx = termPtr -> oobMembrIndx;
+            for (i = 1; i <= genMembrSize; i++) {
+              SG_ambrTNodeID_ptr[treeID][genMembrIndx[i]] = offset;
+            }
+            genMembrSize = termPtr -> ibgMembrCount;
+            genMembrIndx = termPtr -> ibgMembrIndx;
+            for (i = 1; i <= genMembrSize; i++) {
+              SG_ambrTNodeID_ptr[treeID][genMembrIndx[i]] = offset;
+            }
+          }            
           for (j = 1; j <= SG_augmObjCommon -> hcutCnt; j++) {
             SG_BETA_P_ptr[j][offset] = SG_betaP_ptr[treeID][j][k];
           }
@@ -743,6 +772,7 @@ void writeForestObjectsOutput(char mode) {
           offsetID_ombr ++;
           SG_ombrTNodeID_[offsetID_ombr]  = SG_ombrTNodeID_ptr[treeID][k];
         }
+        free_new_vvector(leafLinkedObjMap, 1, RF_tLeafCount[treeID], NRUTIL_LEAFPTR2);
       }
       if (offset != RF_totalNodeCount) {
         RF_nativeError("\nRF-SRC:  *** ERROR *** ");
