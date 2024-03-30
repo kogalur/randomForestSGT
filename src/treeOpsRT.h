@@ -3,7 +3,7 @@
 #include "node.h"
 #include "greedyInfo.h"
 void acquireTreeRT (char mode, uint treeID);
-void predictForestRT(DescriptorObj *headDO, time_t polling);
+void predictForestRT(DescriptorObj *headDO);
 void predictTreeRT(uint treeID);
 void freeTestMembership(uint treeID, NodeBase *parent);
 #endif

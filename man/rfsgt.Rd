@@ -2,8 +2,7 @@
 \alias{rfsgt}
 \alias{filter.rfsgt}
 \alias{filter.custom.rfsgt}
-\alias{gradient.rfsgt}
-\alias{gradient.fast.rfsgt}
+\alias{get.beta}
 \alias{vimp.rfsgt}
 \alias{make.baselearner}
 \title{Random Forest Super Greedy Trees}
@@ -27,7 +26,7 @@ rfsgt(formula,
       nfolds = 10,
       block.size = 10,
       bootstrap = c("by.root", "none", "by.user"),
-      samptype = c("swor", "swr"),  samp = NULL, membership = FALSE,
+      samptype = c("swor", "swr"),  samp = NULL, membership = TRUE,
       sampsize = if (samptype == "swor") function(x){x * .632} else function(x){x},
       seed = NULL,
       do.trace = FALSE,

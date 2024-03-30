@@ -227,7 +227,7 @@ void stackDefinedOutputObjects(char mode) {
       }
       if ((SG_hcut == 0) || (SG_hcut >= 1)) {
         RF_stackCount += 1;
-        RF_stackCount += 15;
+        RF_stackCount += 16;
       }
     }
     if (RF_opt & OPT_EMPR_RISK) {
@@ -549,6 +549,7 @@ void stackForestObjectsPtrOnly(char mode) {
       SG_nodeID_ptr     = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
       SG_nodeSZ_ptr     = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
       SG_brnodeID_ptr   = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
+      SG_prnodeID_ptr   = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
       SG_yBar_ptr     = (double **)  new_vvector(1, RF_ntree, NRUTIL_DPTR);
       SG_yStar_ptr     = (double **)  new_vvector(1, RF_ntree, NRUTIL_DPTR);
       SG_betaZ_ptr     = (double **)  new_vvector(1, RF_ntree, NRUTIL_DPTR);
@@ -596,6 +597,7 @@ void unstackForestObjectsPtrOnly(char mode) {
       free_new_vvector(SG_nodeID_ptr,     1, RF_ntree, NRUTIL_UPTR);
       free_new_vvector(SG_nodeSZ_ptr,     1, RF_ntree, NRUTIL_UPTR);
       free_new_vvector(SG_brnodeID_ptr,   1, RF_ntree, NRUTIL_UPTR);
+      free_new_vvector(SG_prnodeID_ptr,   1, RF_ntree, NRUTIL_UPTR);
       free_new_vvector(SG_nodeStat_ptr,   1, RF_ntree, NRUTIL_DPTR);
       free_new_vvector(SG_bsf_ptr,        1, RF_ntree, NRUTIL_UPTR);
       free_new_vvector(SG_yBar_ptr,    1,  RF_ntree, NRUTIL_DPTR);
@@ -619,6 +621,7 @@ void stackTreeObjectsPtrOnly(char mode, uint treeID) {
     SG_nodeID_ptr[treeID]     = uivector(1, nodeCount);
     SG_nodeSZ_ptr[treeID]     = uivector(1, nodeCount);
     SG_brnodeID_ptr[treeID]   = uivector(1, nodeCount);
+    SG_prnodeID_ptr[treeID]   = uivector(1, nodeCount);
     SG_nodeStat_ptr[treeID]   =   dvector(1, nodeCount);
     SG_bsf_ptr[treeID]        =  uivector(1, nodeCount);
     if ((SG_hcut == 0) || (SG_hcut >= 1)) {
@@ -646,6 +649,7 @@ void unstackTreeObjectsPtrOnly(uint treeID) {
   free_uivector(SG_nodeID_ptr[treeID],     1, nodeCount);
   free_uivector(SG_nodeSZ_ptr[treeID],     1, nodeCount);
   free_uivector(SG_brnodeID_ptr[treeID],   1, nodeCount);
+  free_uivector(SG_prnodeID_ptr[treeID],   1, nodeCount);
   free_dvector(SG_nodeStat_ptr[treeID],    1, nodeCount);
   free_uivector(SG_bsf_ptr[treeID],        1, nodeCount);
   if ((SG_hcut == 0) || (SG_hcut >= 1)) {
@@ -676,10 +680,12 @@ void stackForestObjectsOutput(char mode) {
       SG_nodeID_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
       SG_nodeSZ_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_NODE_SZ, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
       SG_brnodeID_ =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BR_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
+      SG_prnodeID_ =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_PR_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
       SG_treeID_   --;
       SG_nodeID_   --;
       SG_nodeSZ_   --;
       SG_brnodeID_ --;
+      SG_prnodeID_ --;
       SG_nodeStat_ = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_NODE_STAT, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
       SG_nodeStat_ --;
       SG_bsf_ = (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BSF_ORD, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
@@ -736,6 +742,7 @@ void writeForestObjectsOutput(char mode) {
           SG_nodeID_[offset]   = SG_nodeID_ptr[treeID][k];
           SG_nodeSZ_[offset]   = SG_nodeSZ_ptr[treeID][k];
           SG_brnodeID_[offset] = SG_brnodeID_ptr[treeID][k];
+          SG_prnodeID_[offset] = SG_prnodeID_ptr[treeID][k];
           SG_nodeStat_[offset] = SG_nodeStat_ptr[treeID][k];
           SG_bsf_[offset]      = SG_bsf_ptr[treeID][k];          
           SG_yBar_[offset]     = SG_yBar_ptr[treeID][k];

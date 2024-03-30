@@ -355,9 +355,11 @@ rfsgt.workhorse <- function(formula,
                                      nativeOutput$betaZ[1:nativeArraySize],
                                      matrix(nativeOutput$betaP, nrow = nativeArraySize),
                                      nativeOutput$yStar,
-                                     nativeOutput$yBar))
+                                     nativeOutput$yBar,
+                                     nativeOutput$prnodeID[1:nativeArraySize]
+                                     ))
   colnames(nativeArray) <- c("treeID", "nodeID", "nodeSZ", "brnodeID",
-                             "betaZ", as.character(1:hcutCnt), "yStar", "yBar")
+                             "betaZ", as.character(1:hcutCnt), "yStar", "yBar", "prnodeID")
   ## save the lot 
   lot <- c(lot, lasso=lasso, experimental.bits=experimental.bits, tune=tune)
   forest.out  <- list(forest = TRUE,
@@ -374,12 +376,13 @@ rfsgt.workhorse <- function(formula,
                       family = family,
                       bootstrap = bootstrap,
                       samptype = samptype,
+                      experimental.bits = experimental.bits,
                       rmbrCount = nativeOutput$rmbrCount,
                       ombrCount = nativeOutput$ombrCount,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
                       ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
-                      version = "0.0.1.38")
+                      version = "0.0.1.42")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL

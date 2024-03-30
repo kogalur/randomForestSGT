@@ -20,7 +20,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <errno.h>
-void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSize, DescriptorObj *headDO) {
+void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj *headDO) {
   DescriptorObj *tailDO, *currDO;
   char ctrlID;
   int listen_sd, max_sd, new_sd;
@@ -242,6 +242,7 @@ void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSiz
                 }
                 else if (currDO -> record[0] == SG_TCP_CTRL_STP) {
                   ctrlID = SG_TCP_CTRL_ACK;
+                  currDO -> descID = 0;
                   headDO -> userState = SG_DESC_CLOSED;
                 }
                 else if (currDO -> record[0] == SG_TCP_CTRL_TSZ) {

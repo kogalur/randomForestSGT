@@ -128,7 +128,7 @@ void acquireTreeRT(char mode, uint treeID) {
   free_uivector(bootMembrIndx, 1, bootMembrSize);
   free_new_vvector(RF_nodeMembership[treeID], 1, nSize, NRUTIL_NPTR);
 }
-void predictForestRT(DescriptorObj *headDO, time_t polling) {
+void predictForestRT(DescriptorObj *headDO) {
   DescriptorObj *currDO;
   uint bb;
   uint i;

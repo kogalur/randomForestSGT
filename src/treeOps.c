@@ -653,7 +653,8 @@ void saveTree(uint treeID, NodeBase *parent, ulong *offset, ulong *offsetCT, ulo
   uint hcutCnt;
   uint jj;
   (*offset) ++;
-  parent -> bnodeID = *offset;
+  parent -> brnodeID = *offset;
+  SG_prnodeID_ptr[treeID][*offset] = parent -> pnodeID;
   SG_treeID_ptr[treeID][*offset] = treeID;
   SG_nodeID_ptr[treeID][*offset] = parent -> nodeID;
   SG_nodeSZ_ptr[treeID][*offset] = parent -> repMembrSize;
@@ -669,9 +670,9 @@ void saveTree(uint treeID, NodeBase *parent, ulong *offset, ulong *offsetCT, ulo
       SG_yBar_ptr[treeID][*offset] = RF_nativeNaN;
     }
     else {
-      SG_betaZ_ptr[treeID][*offset] = RF_nativeNaN;
+      SG_betaZ_ptr[treeID][*offset] = ((Node *) (parent -> parent)) -> beta[1];
       for (jj = 1; jj <= hcutCnt; jj++) {
-        SG_betaP_ptr[treeID][jj][*offset] = RF_nativeNaN;
+        SG_betaP_ptr[treeID][jj][*offset] = ((Node *) (parent -> parent)) -> beta[1 + jj];
       }
       SG_yBar_ptr[treeID][*offset] = ((Node *) parent) -> mean;      
     }
@@ -695,12 +696,14 @@ void saveTree(uint treeID, NodeBase *parent, ulong *offset, ulong *offsetCT, ulo
     SG_bsf_ptr[treeID][*offset] = ((Node *) parent) -> splitInfoDerived -> bsf;
   }
   if (((parent -> left) != NULL) && ((parent -> right) != NULL)) {
+    parent -> left -> pnodeID = *offset;
+    parent -> right -> pnodeID = *offset;
     saveTree(treeID, parent ->  left, offset, offsetCT, offsetID_rmbr, offsetID_ombr);
     saveTree(treeID, parent -> right, offset, offsetCT, offsetID_rmbr, offsetID_ombr);
-    SG_brnodeID_ptr[treeID][parent -> bnodeID] = (parent -> right) -> bnodeID;
+    SG_brnodeID_ptr[treeID][parent -> brnodeID] = (parent -> right) -> brnodeID;
   }
   else {
-    SG_brnodeID_ptr[treeID][parent -> bnodeID] = 0;
+    SG_brnodeID_ptr[treeID][parent -> brnodeID] = 0;
     (*offsetCT) ++;
     SG_rmbrTNodeCT_ptr[treeID][*offsetCT] = ((Terminal *) (parent -> mate)) -> ibgMembrCount;
     SG_ombrTNodeCT_ptr[treeID][*offsetCT] = ((Terminal *) (parent -> mate)) -> oobMembrCount;

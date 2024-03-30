@@ -1,3 +1,29 @@
+##########################################################################
+###
+### experimental bits
+###
+### The following are mutually exclusive, and you must set one and only one bit.
+###
+### experimental.bits = 0
+### This is pure lasso - the original implementation - good for variable selection but not prediction
+### 
+### experimental.bits = 2^2
+### This gets you Eqn. 4 in the note. The virtual split to a cell A is only allowed to switch from lasso to cart daughter predictors when (4) is met.
+###
+### experimental.bits = 2^3
+### This gets you the "more flexible strategy right after Eqn. 4.  We can call this Eqn. 4a. One, both, or no daughters are switched from lasso to cart predictors in this scenario.
+###
+### experimental.bits = 2^4
+### This gets you Section 3 instead of Section 2.  More specifically it gets you Eqn. 6 instead of Eqn. 4.  We switch from a lasso split to a cart split if Eqn. 6 is satisfied.
+### We can do this because we always test both cart and lasso virtual splits at every node. It gives us a lot of flexibility.
+###
+### experimental.bits = 2^5.
+### Finally, in rare cases, you want the root node to start with a cart predictor and stay a cart tree.  This is not mutually exclusive of the other experimental bits.
+###
+### experimental.bits = 2^6
+### This will swap out the lasso predictor with a cart predictor for terminal nodes only, if the cart risk is less than the lasso risk. This is not mutually exclusive of the other experimental bits.
+###
+##########################################################################
 get.experimental.bits  <- function(experimental.bits, hcut) {
   if (!is.null(experimental.bits)) {
     experimental.bits

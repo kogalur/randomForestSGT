@@ -15,7 +15,7 @@
 #define SG_SOCK_STATE_OPN  0x11
 #define SG_SOCK_STATE_LEN  0x12
 #define SG_SOCK_STATE_DTA  0x13
-void server(uint port, time_t userTimeout, time_t polling, uint xSize, uint pSize, DescriptorObj *headDO);
+void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj *headDO);
 int serverSend(int clientSockFD, char *record, int length);
 int flushReadBuffer(int clientSockFD, DescriptorObj *currDO, char *closeConn);
 extern void predictForestRT();

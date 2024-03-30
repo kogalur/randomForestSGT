@@ -2,6 +2,7 @@
 filter.custom.rfsgt <- function(f, dta, hcut=1, method="liberal", fast=TRUE, ...) {
   ## hidden options
   dots <- list(...)
+  dots$membership <- FALSE
   if (fast) {
     dots$ntree <- 1
   }
@@ -39,6 +40,7 @@ filter.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3, nfolds=5,
     }
     dots$bootstrap <- "none"
   }
+  dots$membership <- FALSE
   ## hereafter we pretend hcut=1
   ## obtain split-weights for varpro
   swt <- do.call("vimp.rfsgt", c(list(f, dta, ntree=ntree, hcut=1, treesize=treesize,
@@ -65,7 +67,6 @@ filter.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3, nfolds=5,
   colnames(vmp) <- c("min", "conserve", "liberal")
   vmp <- vmp[, match(method, c("min", "conserve", "liberal"))]
   names(vmp) <- vmp.names
-  #if (original && hcut<=1) {
   if (original) {
     attr(vmp, "xvar.org.names") <- stump$xvar.names
     attr(vmp, "xvar.names") <- vmp.names
