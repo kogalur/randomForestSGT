@@ -670,9 +670,9 @@ void saveTree(uint treeID, NodeBase *parent, ulong *offset, ulong *offsetCT, ulo
       SG_yBar_ptr[treeID][*offset] = RF_nativeNaN;
     }
     else {
-      SG_betaZ_ptr[treeID][*offset] = ((Node *) (parent -> parent)) -> beta[1];
+      SG_betaZ_ptr[treeID][*offset] = ((Node *) (parent -> parent)) -> splitInfoDerived -> beta[1];
       for (jj = 1; jj <= hcutCnt; jj++) {
-        SG_betaP_ptr[treeID][jj][*offset] = ((Node *) (parent -> parent)) -> beta[1 + jj];
+        SG_betaP_ptr[treeID][jj][*offset] = ((Node *) (parent -> parent)) -> splitInfoDerived -> beta[1 + jj];
       }
       SG_yBar_ptr[treeID][*offset] = ((Node *) parent) -> mean;      
     }

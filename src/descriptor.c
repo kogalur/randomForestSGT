@@ -133,13 +133,15 @@ void freeDescriptorObj(DescriptorObj *obj) {
   free_gblock(obj -> yHatPacket, sizeof(PredictorPacket));
   free_gblock(obj, sizeof(DescriptorObj));
 }
-uint unlinkUnheldDescriptors(DescriptorObj *headDO, DescriptorObj **tailDO, char force) {
+uint unlinkUnheldDescriptors(DescriptorObj *headDO, DescriptorObj **tailDO, char force, uint *live) {
   DescriptorObj *currDO, *oldDO;
   uint count;
   count = 0;
+  *live = 0;
   currDO = headDO;
   while (currDO != *tailDO) {
     currDO = currDO -> fwdLink;
+    (*live) ++;
     if (force == TRUE) {
       currDO -> descID = 0;
     }
@@ -160,6 +162,7 @@ uint unlinkUnheldDescriptors(DescriptorObj *headDO, DescriptorObj **tailDO, char
         currDO = currDO -> bakLink;
         freeDescriptorObj(oldDO);
         count ++;
+        (*live) --;
       }
     }
   }

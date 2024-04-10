@@ -45,5 +45,5 @@ DescriptorObj *makeDescriptorObj(uint xSize, uint pSize, int descID, char sockSt
 void setDescriptorObj(DescriptorObj *obj, uint nSizeAlloc, char respInFlag);
 void resetDescriptorObj(DescriptorObj *obj, char socketState);
 void freeDescriptorObj(DescriptorObj *obj);
-uint unlinkUnheldDescriptors(DescriptorObj *headDO, DescriptorObj **tailDO, char force);
+uint unlinkUnheldDescriptors(DescriptorObj *headDO, DescriptorObj **tailDO, char force, uint *live);
 #endif

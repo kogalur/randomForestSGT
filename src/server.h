@@ -1,9 +1,6 @@
 #ifndef RF_SERVER_H
 #define RF_SERVER_H
-#define SG_TCP_PORT 6666
 #define SG_TCP_BACKLOG 32
-#define SG_TCP_TIMEOUT 15
-#define SG_TCP_POLLING 50
 #define SG_TCP_CTRL_NAK   0x00 
 #define SG_TCP_CTRL_ACK   0x01 
 #define SG_TCP_CTRL_QRY   0x02 

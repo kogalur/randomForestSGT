@@ -189,7 +189,7 @@ vimp.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3,
   ## remove everything but beta
   if (nrow(ar) > 0) {
     beta <- ar[, !(colnames(ar) %in%
-              c("treeID", "nodeID", "nodeSZ", "brnodeID","betaZ", "yStar", "yBar")), drop = FALSE]
+      c("treeID", "nodeID", "nodeSZ", "brnodeID","betaZ", "yStar", "yBar", "prnodeID")), drop = FALSE]
     beta <- beta[, 1:p, drop = FALSE]
     beta <- colMeans(abs(beta), na.rm = TRUE)
   }

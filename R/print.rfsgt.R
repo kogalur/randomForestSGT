@@ -16,7 +16,7 @@ print.rfsgt <- function(x, ...) {
   arr <- x$forest$nativeArray[x$forest$nativeArray$brnodeID==0,, drop = FALSE]
   nodeSZ <- mean(tapply(arr$nodeSZ, arr$treeID, mean, na.rm = TRUE), na.rm = TRUE)
   hcut.dim <- sum(!(colnames(arr) %in%
-                  c("treeID", "nodeID", "nodeSZ", "brnodeID", "betaZ", "yStar", "yBar")))
+       c("treeID", "nodeID", "nodeSZ", "brnodeID", "betaZ", "yStar", "yBar", "prnodeID")))
   ## output 
   cat("                         Sample size: ", x$n,                                  "\n", sep="")
   cat("                    Tree sample size: ", x$sampsize,                           "\n", sep="")

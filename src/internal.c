@@ -124,6 +124,8 @@ ulong    *SG_offsetID_ombr;
 AugmentationObjCommon *SG_augmObjCommon;
 char (*getVariance) (uint, uint*, double*, double*, double*);
 DescriptorObj *SG_headDO;
+uint SG_tcpPort;
+uint SG_tcpTimeOut;
 #ifdef _OPENMP
 omp_lock_t   SG_lockDO;
 #endif

@@ -27,6 +27,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
   int desc_ready;
   int optval;
   int result;
+  uint live;
   struct sockaddr_in addr;
   struct timeval timeout;
   fd_set master_set, working_set;
@@ -242,7 +243,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
                 }
                 else if (currDO -> record[0] == SG_TCP_CTRL_STP) {
                   ctrlID = SG_TCP_CTRL_ACK;
-                  currDO -> descID = 0;
+                  closeConn = TRUE;
                   headDO -> userState = SG_DESC_CLOSED;
                 }
                 else if (currDO -> record[0] == SG_TCP_CTRL_TSZ) {
@@ -364,13 +365,20 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
 #ifdef _OPENMP
           omp_set_lock(&SG_lockDO);
 #endif
-          k = unlinkUnheldDescriptors(headDO, &tailDO, FALSE);
+          k = unlinkUnheldDescriptors(headDO, &tailDO, FALSE, &live);
 #ifdef _OPENMP
           omp_unset_lock(&SG_lockDO);
 #endif
+          if (headDO -> userState == SG_DESC_CLOSED) {
+            if (live == 0) {
+              serverExit = TRUE;
+              break;
+            }
+          }
         }  
       }  
     }  
+    RF_nativePrint("\n TEST 10:   %10d %10d", serverExit, live);
   } while (serverExit == FALSE);
   for (listen_i = 0; listen_i <= max_sd; ++listen_i) {
     if (FD_ISSET(listen_i, &master_set)) {
@@ -381,7 +389,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
 #ifdef _OPENMP
     omp_set_lock(&SG_lockDO);
 #endif
-    k = unlinkUnheldDescriptors(headDO, &tailDO, TRUE);
+    k = unlinkUnheldDescriptors(headDO, &tailDO, TRUE, &live);
 #ifdef _OPENMP
     omp_unset_lock(&SG_lockDO);
 #endif

@@ -86,7 +86,7 @@ predict.rfsgt.workhorse <-  function(object,
   }
   else {
     object.version <- as.integer(unlist(strsplit(object$version, "[.]")))
-    installed.version <- as.integer(unlist(strsplit("0.0.1.42", "[.]")))
+    installed.version <- as.integer(unlist(strsplit("0.0.1.45", "[.]")))
     minimum.version <- as.integer(unlist(strsplit("0.0.0.0", "[.]")))
     object.version.adj <- object.version[1] + (object.version[2]/10) + (object.version[3]/100)
     installed.version.adj <- installed.version[1] + (installed.version[2]/10) + (installed.version[3]/100)
@@ -180,6 +180,12 @@ predict.rfsgt.workhorse <-  function(object,
   ## Real time prediction option:
   real.time  <- is.hidden.rt(dots)    
   real.time.bits  <- get.rt.bits(real.time)
+  if (real.time) {
+    real.time.options  <- is.hidden.rt.opt(dots)
+  }
+  else {
+    real.time.options  <- NULL
+  }
   pivot = 6
   ## Start the C external timer.
   ctime.external.start  <- proc.time()
@@ -253,6 +259,7 @@ predict.rfsgt.workhorse <-  function(object,
                                   as.integer(object$ombrIdent),
                                   as.integer(get.tree),
                                   as.integer(block.size),
+                                  if (real.time) list(as.integer(real.time.options$port), as.integer(real.time.options$time.out)) else NULL,
                                   as.integer(get.rf.cores()))}, error = function(e){NULL})
   ## Stop the C external timer.
   ctime.external.stop <- proc.time()

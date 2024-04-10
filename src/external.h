@@ -128,6 +128,8 @@ extern ulong    *SG_offsetID_ombr;
 extern AugmentationObjCommon *SG_augmObjCommon;
 extern char (*getVariance) (uint, uint*, double*, double*, double*);
 extern DescriptorObj *SG_headDO;
+extern uint SG_tcpPort;
+extern uint SG_tcpTimeOut;
 #ifdef _OPENMP
 extern omp_lock_t   SG_lockDO;
 #endif

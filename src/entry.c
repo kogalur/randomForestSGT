@@ -286,6 +286,7 @@ SEXP entryPred(SEXP traceFlag,
                SEXP ombrID,
                SEXP getTree,
                SEXP perfBlock,
+               SEXP realTimeOpt,
                SEXP numThreads) {
   char mode;
   char result;
@@ -425,6 +426,12 @@ SEXP entryPred(SEXP traceFlag,
   RF_perfBlock            = INTEGER(perfBlock)[0];
   RF_getTree = (uint *) INTEGER(getTree);  RF_getTree --;
   RF_numThreads           = INTEGER(numThreads)[0];
+  SG_tcpPort = 0;
+  SG_tcpTimeOut = 0;
+  if(realTimeOpt != R_NilValue) {
+    SG_tcpPort = (uint) INTEGER(VECTOR_ELT(realTimeOpt, 0))[0];
+    SG_tcpTimeOut = (uint) INTEGER(VECTOR_ELT(realTimeOpt, 1))[0];
+  }
   mode = processDefaultPredict();
   if (mode == RF_REAL) {
     result = sgtMainRT(mode, seedValue);

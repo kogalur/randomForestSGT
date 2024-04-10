@@ -170,6 +170,14 @@ get.rt.bits  <- function(real.time) {
   }
   return (bits)
 }
+is.hidden.rt.opt  <- function(dots) {
+  if (is.null(dots$real.time.options)) {
+    list(port = 6666, time.out = 15)      
+  }
+  else {
+    dots$real.time.options
+  }
+}
 ## convert samptype option into native code parameter.
 get.samptype.bits <- function (samptype) {
   if (samptype == "swr") {

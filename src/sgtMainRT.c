@@ -574,7 +574,7 @@ void sgtWorkRT(uint threadID) {
 #ifdef _OPENMP  
   if (threadID == 1) {
     omp_init_lock(&SG_lockDO);
-    server(SG_TCP_PORT, SG_TCP_TIMEOUT, RF_xSize, hcutCntProxy, SG_headDO);
+    server(SG_tcpPort, SG_tcpTimeOut, RF_xSize, hcutCntProxy, SG_headDO);
     omp_destroy_lock(&SG_lockDO);
   }
   else if (threadID == 2) {
@@ -582,7 +582,7 @@ void sgtWorkRT(uint threadID) {
   }
 #else
   if (threadID == 1) {  
-    server(SG_TCP_PORT, SG_TCP_TIMEOUT, RF_xSize, hcutCntProxy, SG_headDO);
+    server(SG_tcpPort, SG_tcpTimeOut, RF_xSize, hcutCntProxy, SG_headDO);
   }
   else {
   }

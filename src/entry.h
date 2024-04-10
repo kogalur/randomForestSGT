@@ -64,6 +64,7 @@ SEXP entryPred(SEXP traceFlag,
                SEXP tnACNT,
                SEXP getTree,
                SEXP perfBlock,
+               SEXP realTimeOpt,
                SEXP numThreads);
 SEXP entryCDL(SEXP traceFlag,
               SEXP seedPtr,

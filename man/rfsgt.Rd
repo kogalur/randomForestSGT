@@ -244,11 +244,11 @@ print(rfsgt(V4~., na.omit(Ozone), hcut=3))
 ## ------------------------------------------------------------
 
 ## simulate non-linear boundary
-n <- 1000
+n <- 500
 p <- 10
 signal <- 10
-treesize <- 40
-ngrid <- 100
+treesize <- 10
+ngrid <- 200
 
 ## train
 x <- matrix(runif(n * p), ncol = p)
@@ -267,17 +267,17 @@ colnames(x.tst) <- colnames(x)
 fx.tst <- signal * sin(pi * x.tst[, 1] * x.tst[, 2])
 nl2d.tst <- data.frame(y = fx.tst, x.tst)
 
-
 ## SGT for different hcut values
 rO <- lapply(0:4, function(hcut) {
   cat("hcut", hcut, "\n")
-  rfsgt(y~., nl2d, ntree=1, hcut=hcut, treesize=treesize, bootstrap="none")
+  rfsgt(y~., nl2d, ntree=1, hcut=hcut, treesize=treesize, bootstrap="none",
+         tune=TRUE, nodesize=1, strikeout=10000, filter=FALSE)
 })
 
+## nice little wrapper for plotting results
 if (library("interp", logical.return = TRUE)) {
-
   ## nice little wrapper for plotting results
-  plot.image <- function(x, y, z, linear=TRUE, nlevels=100, points=FALSE) {
+  plot.image <- function(x, y, z, linear=TRUE, nlevels=40, points=FALSE) {
     xo <- x; yo <- y
     so <- interp(x=x, y=y, z=z, linear=linear, nx=nlevels, ny=nlevels)
     x <- so$x; y <- so$y; z <- so$z
@@ -298,21 +298,22 @@ if (library("interp", logical.return = TRUE)) {
     invisible()
   }
 
-  par(mfrow=c(2,3))
-  image(x1, x2, truth)
+  par(mfrow=c(3,2))
+  image(x1, x2, truth, xlab="", ylab="")
   contour(x1, x2, truth, nlevels = 15, add = TRUE, drawlabels = FALSE)
-  mtext("Truth")
-  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[1]]$predicted)
-  mtext("hcut=0")
-  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[2]]$predicted)
-  mtext("hcut=1")
-  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[3]]$predicted)
-  mtext("hcut=2")
-  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[4]]$predicted)
-  mtext("hcut=3")
-  plot.image(nl2d[,"X1"],nl2d[,"X2"], rO[[5]]$predicted)
-  mtext("hcut=4")
+  mtext(expression(x[1]),1,line=2)
+  mtext(expression(x[2]),2,line=2)
+  mtext(expression("truth"),3,line=1)
 
+  lapply(0:4, function(j) {
+    plot.image(nl2d.tst[,"X1"],nl2d.tst[,"X2"], predict(rO[[j+1]], nl2d.tst)$predicted)
+    contour(x1, x2, truth, nlevels = 15, add = TRUE, drawlabels = FALSE)
+    mtext(expression(x[1]),1,line=2)
+    mtext(expression(x[2]),2,line=2)
+    mtext(paste0("hcut=",j),3,line=1)
+  })
+
+ 
 }
 
 ## ------------------------------------------------------------
@@ -370,8 +371,8 @@ plot(1:o2$ntree, o2$err.rate, type="s", xlab="Trees", ylab="SGF OOB error")
 ## ------------------------------------------------------------
 
 ## friedman 1
-d1 <- data.frame(mlbench:::mlbench.friedman1(1000))
-f1 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+d1 <- data.frame(mlbench:::mlbench.friedman1(500))
+f1 <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
    cat("hcut:", hcut, "\n")
    o <- rfsgt(y~., d1, hcut=hcut)
    c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
@@ -379,8 +380,8 @@ f1 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
 colnames(f1) <- c("hcut", "mse", "smse")
 
 ## friedman 2
-d2 <- data.frame(mlbench:::mlbench.friedman2(1000))
-f2 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+d2 <- data.frame(mlbench:::mlbench.friedman2(500))
+f2 <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
    cat("hcut:", hcut, "\n")
    o <- rfsgt(y~., d2, hcut=hcut)
    c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
@@ -388,8 +389,8 @@ f2 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
 colnames(f2) <- c("hcut", "mse", "smse")
 
 ## friedman 3
-d3 <- data.frame(mlbench:::mlbench.friedman3(1000))
-f3 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+d3 <- data.frame(mlbench:::mlbench.friedman3(500))
+f3 <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
    cat("hcut:", hcut, "\n")
    o <- rfsgt(y~., d3, hcut=hcut)
    c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
@@ -397,8 +398,8 @@ f3 <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
 colnames(f3) <- c("hcut", "mse", "smse")
 
 ## peak 
-dp <- data.frame(mlbench:::mlbench.peak(1000, 10))
-peak <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+dp <- data.frame(mlbench:::mlbench.peak(500, 10))
+peak <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
    cat("hcut:", hcut, "\n")
    o <- rfsgt(y~., dp, hcut=hcut)
    c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
@@ -406,11 +407,11 @@ peak <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
 colnames(peak) <- c("hcut", "mse", "smse")
 
 ## linear model with polynomial terms
-n <- 1000; p <- 10; sd <- .1
+n <- 500; p <- 10; sd <- .1
 x <- matrix(runif(n*p), n)
 y <- 3 * x[,1]^3 - 2*x[,2]^2 + 3*x[,3] + rnorm(n, sd=sd)
 dl <- data.frame(y=y, x)
-linear <- data.frame(do.call(rbind, lapply(0:4, function(hcut) {
+linear <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
   cat("hcut:", hcut, "\n")
   o <- rfsgt(y~., dl, hcut=hcut)
   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
