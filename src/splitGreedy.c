@@ -219,183 +219,185 @@ char getBestSplit(uint treeID, LatOptTreeObj *lotObj, GreedyObj *greedyMembr) {
         greedyMembr -> splitInfoDerived -> yBar  = RF_nativeNaN;
       }
       else {
-          RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-          RF_nativeError("\nRF-SRC:  lasso failure on parent node virtual split is impossible.");
-          RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
-          RF_nativeExit();
       }
     }  
-    greedyMembr -> splitInfoDerivedCart = makeSplitInfoDerived(parent -> augm -> common);
-    localSplitIndicator = ((SplitInfoMax *) (greedyMembr -> splitInfoDerivedCart)) -> indicator;
-    for (i = 1; i <= allMembrSize; i++) {
-      localSplitIndicator[allMembrIndx[i]] = NEITHER;
-    }
-    resultCart = virtuallySplitNodeGreedyCart(treeID,
-                                          greedyMembr,
-                                          localSplitIndicator,
-                                          & localSplitIndx,  
-                                          & localSplitValue,
-                                          & leftSize);
-    if (resultCart) {
-      rightSize = parentBase -> repMembrSize - leftSize;
-      if ((leftSize != 0) && (rightSize != 0)) {
+    if ( !( (resultLasso == FALSE) && ( !(SG_optLocal & ((SG_OPT_SWTCH_TWO) | (SG_OPT_SWTCH_THREE) | (SG_OPT_SWTCH_FOUR) | (SG_OPT_SWTCH_FIVE) | (SG_OPT_SWTCH_SIX))) ) ) ) {
+      greedyMembr -> splitInfoDerivedCart = makeSplitInfoDerived(parent -> augm -> common);
+      localSplitIndicator = ((SplitInfoMax *) (greedyMembr -> splitInfoDerivedCart)) -> indicator;
+      for (i = 1; i <= allMembrSize; i++) {
+        localSplitIndicator[allMembrIndx[i]] = NEITHER;
+      }
+      resultCart = virtuallySplitNodeGreedyCart(treeID,
+                                                greedyMembr,
+                                                localSplitIndicator,
+                                                & localSplitIndx,  
+                                                & localSplitValue,
+                                                & leftSize);
+      if (resultCart) {
+        rightSize = parentBase -> repMembrSize - leftSize;
+        if ((leftSize != 0) && (rightSize != 0)) {
+        }
+        else {
+          RF_nativeError("\nRF-SRC:  *** ERROR *** ");
+          RF_nativeError("\nRF-SRC:  left or right size is zero:  (%10d or %10d)", leftSize, rightSize);
+          RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
+          RF_nativeExit();
+        }
+        greedyMembr -> splitInfoDerivedCart -> yStar = 0.0;
+        greedyMembr -> splitInfoDerivedCart -> yBar = parentBase -> mean;
+        beta = greedyMembr -> splitInfoDerivedCart -> beta = dvector(1, hcutCnt + 1);
+        for (jj = 1; jj <= hcutCnt; jj++) {
+          beta[1 + jj] = 0.0;
+        }
+        beta[1 + ((SplitInfoMax *) (greedyMembr -> splitInfoDerivedCart)) -> splitParameter] = 1.0;
+        beta[1] = - ((SplitInfoMax *) (greedyMembr -> splitInfoDerivedCart)) -> splitValueCont;
       }
       else {
-        RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-        RF_nativeError("\nRF-SRC:  left or right size is zero:  (%10d or %10d)", leftSize, rightSize);
-        RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
-        RF_nativeExit();
+        freeSplitInfoDerived(greedyMembr -> splitInfoDerivedCart, parent -> augm -> common);
+        greedyMembr -> splitInfoDerivedCart = NULL;
+        greedyMembr -> leftCart  = NULL;
+        greedyMembr -> rightCart = NULL;
       }
-      greedyMembr -> splitInfoDerivedCart -> yStar = 0.0;
-      greedyMembr -> splitInfoDerivedCart -> yBar = parentBase -> mean;
-      beta = greedyMembr -> splitInfoDerivedCart -> beta = dvector(1, hcutCnt + 1);
-      for (jj = 1; jj <= hcutCnt; jj++) {
-        beta[1 + jj] = 0.0;
-      }
-      beta[1 + ((SplitInfoMax *) (greedyMembr -> splitInfoDerivedCart)) -> splitParameter] = 1.0;
-      beta[1] = - ((SplitInfoMax *) (greedyMembr -> splitInfoDerivedCart)) -> splitValueCont;
-    }
-    else {
-      freeSplitInfoDerived(greedyMembr -> splitInfoDerivedCart, parent -> augm -> common);
-      greedyMembr -> splitInfoDerivedCart = NULL;
-      greedyMembr -> leftCart  = NULL;
-      greedyMembr -> rightCart = NULL;
-    }
-    if (parentBase -> depth == 0) {
-      allMembrIndx = parentBase -> allMembrIndx;
-      allMembrSize = parentBase -> allMembrSize; 
-      yHatAbsolute = parent -> yHatAbsolute;
-      xArray = parent -> augm -> common -> xArray;
-      yArray = parent -> augm -> common -> yArray;
-      if ((greedyMembr -> splitInfoDerived != NULL) && (greedyMembr -> splitInfoDerivedCart != NULL)) {
+      if (parentBase -> depth == 0) {
+        allMembrIndx = parentBase -> allMembrIndx;
+        allMembrSize = parentBase -> allMembrSize; 
+        yHatAbsolute = parent -> yHatAbsolute;
+        xArray = parent -> augm -> common -> xArray;
+        yArray = parent -> augm -> common -> yArray;
+        if ((greedyMembr -> splitInfoDerived != NULL) && (greedyMembr -> splitInfoDerivedCart != NULL)) {
+          sumLasso = 0.0;
+          if (greedyMembr -> left -> outcome == OUTC_LASSO) {
+            sumLasso += greedyMembr -> left -> eRisk;
+          }
+          else {
+            sumLasso += greedyMembr -> left -> eRiskCart;
+          }
+          if (greedyMembr -> right -> outcome == OUTC_LASSO) {
+            sumLasso += greedyMembr -> right -> eRisk;          
+          }
+          else {
+            sumLasso += greedyMembr -> right -> eRiskCart;          
+          }
+          sumCart = greedyMembr -> leftCart -> eRiskCart + greedyMembr -> rightCart -> eRiskCart;
+          if ((SG_optLocal & SG_OPT_SWTCH_FIVE) && (sumCart <= sumLasso)) {
+            parent -> hcut = 0;
+            parent -> outcome = OUTC_CART;                   
+            if (RF_opt & OPT_EMPR_RISK) {
+              SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRiskCart;
+            }
+            eRiskOOB = & (parent -> eRiskOOB);
+            *eRiskOOB = 0.0;
+            for (i = 1; i <= allMembrSize; i++) {
+              yHatAbsolute[allMembrIndx[i]] = parent -> mean;
+              if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
+                *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
+              }
+            }
+            freeSplitInfoDerived(greedyMembr -> splitInfoDerived, parent -> augm -> common);
+            greedyMembr -> splitInfoDerived = NULL;
+            freeNode(greedyMembr -> left);
+            freeNode(greedyMembr -> right);
+            greedyMembr -> left  = NULL;
+            greedyMembr -> right = NULL;
+          }
+          else {
+            if (RF_opt & OPT_EMPR_RISK) {
+              SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRisk;
+            }
+            beta = parent -> beta;
+            eRiskOOB = & (parent -> eRiskOOB);
+            *eRiskOOB = 0.0;
+            for (i = 1; i <= allMembrSize; i++) {
+              if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {                        
+                predicted = beta[1];
+                for (jj = 1; jj <= hcutCnt; jj++) {
+                  predicted = predicted + (beta[jj+1] * xArray[jj][allMembrIndx[i]]);
+                }
+                yHatAbsolute[allMembrIndx[i]] = predicted;
+                *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
+              } 
+            }          
+          }
+        }
+        else {
+          if (greedyMembr -> splitInfoDerived != NULL) {
+            if (RF_opt & OPT_EMPR_RISK) {
+              SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRisk;
+            }
+            beta = parent -> beta;
+            eRiskOOB = & (parent -> eRiskOOB);
+            *eRiskOOB = 0.0;
+            for (i = 1; i <= allMembrSize; i++) {
+              if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {                        
+                predicted = beta[1];
+                for (jj = 1; jj <= hcutCnt; jj++) {
+                  predicted = predicted + (beta[jj+1] * xArray[jj][allMembrIndx[i]]);
+                }
+                yHatAbsolute[allMembrIndx[i]] = predicted;
+                *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
+              } 
+            }          
+          }
+          else {
+            parent -> hcut = 0;
+            parent -> outcome = OUTC_CART;                   
+            if (RF_opt & OPT_EMPR_RISK) {
+              SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRiskCart;
+            }
+            eRiskOOB = & (parent -> eRiskOOB);
+            *eRiskOOB = 0.0;
+            for (i = 1; i <= allMembrSize; i++) {
+              yHatAbsolute[allMembrIndx[i]] = parent -> mean;
+              if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
+                *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
+              }
+            }
+          }
+        }
+        if (RF_opt & OPT_EMPR_RISK) {
+          SG_oobEmprRSKptr[treeID][lotObj -> treeSize] = parent -> eRiskOOB;
+        }
+        insertRisk(treeID, lotObj, parent -> eRiskOOB);
+      }  
+      if (greedyMembr -> splitInfoDerived != NULL) {
+        eRiskLossLasso = parent -> eRisk;
         sumLasso = 0.0;
         if (greedyMembr -> left -> outcome == OUTC_LASSO) {
           sumLasso += greedyMembr -> left -> eRisk;
+          eRiskLossLasso -= greedyMembr -> left -> eRisk;
         }
         else {
           sumLasso += greedyMembr -> left -> eRiskCart;
+          eRiskLossLasso -= greedyMembr -> left -> eRiskCart;
         }
         if (greedyMembr -> right -> outcome == OUTC_LASSO) {
-          sumLasso += greedyMembr -> right -> eRisk;          
+          sumLasso += greedyMembr -> right -> eRisk;
+          eRiskLossLasso -= greedyMembr -> right -> eRisk;          
         }
         else {
-          sumLasso += greedyMembr -> right -> eRiskCart;          
+          sumLasso += greedyMembr -> right -> eRiskCart;
+          eRiskLossLasso -= greedyMembr -> right -> eRiskCart;          
         }
-        sumCart = greedyMembr -> leftCart -> eRiskCart + greedyMembr -> rightCart -> eRiskCart;
-        if ((SG_optLocal & SG_OPT_SWTCH_FIVE) && (sumCart <= sumLasso)) {
-          parent -> hcut = 0;
-          parent -> outcome = OUTC_CART;                   
-          if (RF_opt & OPT_EMPR_RISK) {
-            SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRiskCart;
-          }
-          eRiskOOB = & (parent -> eRiskOOB);
-          *eRiskOOB = 0.0;
-          for (i = 1; i <= allMembrSize; i++) {
-            yHatAbsolute[allMembrIndx[i]] = parent -> mean;
-            if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
-              *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
-            }
-          }
-          freeSplitInfoDerived(greedyMembr -> splitInfoDerived, parent -> augm -> common);
-          greedyMembr -> splitInfoDerived = NULL;
-          freeNode(greedyMembr -> left);
-          freeNode(greedyMembr -> right);
-          greedyMembr -> left  = NULL;
-          greedyMembr -> right = NULL;
+      }
+      if (greedyMembr -> splitInfoDerivedCart != NULL) {
+        sumCart = greedyMembr -> leftCart -> eRiskCart + greedyMembr -> rightCart -> eRiskCart;      
+        if (parent -> hcut >= 1) {
+          eRiskLossCart = parent -> eRisk - greedyMembr -> leftCart -> eRiskCart - greedyMembr -> rightCart -> eRiskCart;
         }
         else {
-          if (RF_opt & OPT_EMPR_RISK) {
-            SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRisk;
-          }
-          beta = parent -> beta;
-          eRiskOOB = & (parent -> eRiskOOB);
-          *eRiskOOB = 0.0;
-          for (i = 1; i <= allMembrSize; i++) {
-            if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {                        
-              predicted = beta[1];
-              for (jj = 1; jj <= hcutCnt; jj++) {
-                predicted = predicted + (beta[jj+1] * xArray[jj][allMembrIndx[i]]);
-              }
-              yHatAbsolute[allMembrIndx[i]] = predicted;
-              *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
-            } 
-          }          
+          eRiskLossCart = parent -> eRiskCart - greedyMembr -> leftCart -> eRiskCart - greedyMembr -> rightCart -> eRiskCart;
         }
       }
-      else {
-        if (greedyMembr -> splitInfoDerived != NULL) {
-          if (RF_opt & OPT_EMPR_RISK) {
-            SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRisk;
+      if ((greedyMembr -> splitInfoDerived != NULL) && (greedyMembr -> splitInfoDerivedCart != NULL)) {    
+        if (SG_optLocal & SG_OPT_SWTCH_FOUR) {
+          if (sumLasso >= sumCart) {
+            greedyMembr -> bestSplitType = REGR_CRT;
+            greedyMembr -> eRiskLoss = eRiskLossCart;
           }
-          beta = parent -> beta;
-          eRiskOOB = & (parent -> eRiskOOB);
-          *eRiskOOB = 0.0;
-          for (i = 1; i <= allMembrSize; i++) {
-            if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {                        
-              predicted = beta[1];
-              for (jj = 1; jj <= hcutCnt; jj++) {
-                predicted = predicted + (beta[jj+1] * xArray[jj][allMembrIndx[i]]);
-              }
-              yHatAbsolute[allMembrIndx[i]] = predicted;
-              *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
-            } 
-          }          
-        }
-        else {
-          parent -> hcut = 0;
-          parent -> outcome = OUTC_CART;                   
-          if (RF_opt & OPT_EMPR_RISK) {
-            SG_emprRSKptr[treeID][lotObj -> treeSize] = parent -> eRiskCart;
+          else {
+            greedyMembr -> bestSplitType = REGR_CDL;
+            greedyMembr -> eRiskLoss = eRiskLossLasso;
           }
-          eRiskOOB = & (parent -> eRiskOOB);
-          *eRiskOOB = 0.0;
-          for (i = 1; i <= allMembrSize; i++) {
-            yHatAbsolute[allMembrIndx[i]] = parent -> mean;
-            if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
-              *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
-            }
-          }
-        }
-      }
-      if (RF_opt & OPT_EMPR_RISK) {
-        SG_oobEmprRSKptr[treeID][lotObj -> treeSize] = parent -> eRiskOOB;
-      }
-      insertRisk(treeID, lotObj, parent -> eRiskOOB);
-    }  
-    if (greedyMembr -> splitInfoDerived != NULL) {
-      eRiskLossLasso = parent -> eRisk;
-      sumLasso = 0.0;
-      if (greedyMembr -> left -> outcome == OUTC_LASSO) {
-        sumLasso += greedyMembr -> left -> eRisk;
-        eRiskLossLasso -= greedyMembr -> left -> eRisk;
-      }
-      else {
-        sumLasso += greedyMembr -> left -> eRiskCart;
-        eRiskLossLasso -= greedyMembr -> left -> eRiskCart;
-      }
-      if (greedyMembr -> right -> outcome == OUTC_LASSO) {
-        sumLasso += greedyMembr -> right -> eRisk;
-        eRiskLossLasso -= greedyMembr -> right -> eRisk;          
-      }
-      else {
-        sumLasso += greedyMembr -> right -> eRiskCart;
-        eRiskLossLasso -= greedyMembr -> right -> eRiskCart;          
-      }
-    }
-    if (greedyMembr -> splitInfoDerivedCart != NULL) {
-      sumCart = greedyMembr -> leftCart -> eRiskCart + greedyMembr -> rightCart -> eRiskCart;      
-      if (parent -> hcut >= 1) {
-        eRiskLossCart = parent -> eRisk - greedyMembr -> leftCart -> eRiskCart - greedyMembr -> rightCart -> eRiskCart;
-      }
-      else {
-        eRiskLossCart = parent -> eRiskCart - greedyMembr -> leftCart -> eRiskCart - greedyMembr -> rightCart -> eRiskCart;
-      }
-    }
-    if ((greedyMembr -> splitInfoDerived != NULL) && (greedyMembr -> splitInfoDerivedCart != NULL)) {    
-      if (SG_optLocal & SG_OPT_SWTCH_FOUR) {
-        if (sumLasso >= sumCart) {
-          greedyMembr -> bestSplitType = REGR_CRT;
-          greedyMembr -> eRiskLoss = eRiskLossCart;
         }
         else {
           greedyMembr -> bestSplitType = REGR_CDL;
@@ -403,22 +405,21 @@ char getBestSplit(uint treeID, LatOptTreeObj *lotObj, GreedyObj *greedyMembr) {
         }
       }
       else {
-        greedyMembr -> bestSplitType = REGR_CDL;
-        greedyMembr -> eRiskLoss = eRiskLossLasso;
+        if (greedyMembr -> splitInfoDerived != NULL) {
+          greedyMembr -> bestSplitType = REGR_CDL;
+          greedyMembr -> eRiskLoss = eRiskLossLasso;          
+        }
+        else {
+          greedyMembr -> bestSplitType = REGR_CRT;
+          greedyMembr -> eRiskLoss = eRiskLossCart;
+        }
       }
     }
     else {
-      if (greedyMembr -> splitInfoDerived != NULL) {
-        greedyMembr -> bestSplitType = REGR_CDL;
-        greedyMembr -> eRiskLoss = eRiskLossLasso;          
-      }
-      else {
-        greedyMembr -> bestSplitType = REGR_CRT;
-        greedyMembr -> eRiskLoss = eRiskLossCart;
-      }
+      result = FALSE;
     }
   }  
-  return (result && (resultLasso || resultCart));
+  return result;
 }
 char virtuallySplitNodeGreedyLasso(uint       treeID,
                                   GreedyObj *greedyMembr,
@@ -433,6 +434,8 @@ char virtuallySplitNodeGreedyLasso(uint       treeID,
   double *yHatAbsoluteLasso;
   uint  rightSize;
   uint i, k;
+  char result;
+  result = TRUE;
   parent     = greedyMembr -> parent;
   baseParent = (NodeBase *) parent;
   AugmentationObjCommon *augmObjCommon = parent -> augm -> common;  
@@ -527,20 +530,28 @@ char virtuallySplitNodeGreedyLasso(uint       treeID,
     }
   }
   else {
-    if (!RF_nativeIsNaN(left -> eRisk)) {
-      left -> outcome = OUTC_LASSO;
+    if ( !(SG_optLocal & ((SG_OPT_SWTCH_TWO) | (SG_OPT_SWTCH_THREE) | (SG_OPT_SWTCH_FOUR) | (SG_OPT_SWTCH_FIVE) | (SG_OPT_SWTCH_SIX))) ) {
+      result = FALSE;
+      freeNode(left);
+      freeNode(right);
+      greedyMembr -> left = greedyMembr -> right = NULL;
     }
     else {
-      left -> outcome = OUTC_CART;
-    }
-    if (!RF_nativeIsNaN(right -> eRisk)) {
-      right -> outcome = OUTC_LASSO;
-    }
-    else {
-      right -> outcome = OUTC_CART;
+      if (!RF_nativeIsNaN(left -> eRisk)) {
+        left -> outcome = OUTC_LASSO;
+      }
+      else {
+        left -> outcome = OUTC_CART;
+      }
+      if (!RF_nativeIsNaN(right -> eRisk)) {
+        right -> outcome = OUTC_LASSO;
+      }
+      else {
+        right -> outcome = OUTC_CART;
+      }
     }
   }
-  return TRUE;
+  return result;
 }
 void initializeBetaAndPredicted(uint treeID, Node *parent) {
   double **xArray;

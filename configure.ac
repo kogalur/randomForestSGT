@@ -4,7 +4,7 @@
 # - Run with automatic detection: `R CMD INSTALL {pkg}`
 #
 
-AC_INIT([randomForestSGT], [0.0.1.45], [ubk@kogalur.com], [randomForestSGT], [https://github.com/kogalur/randomForestSGT])
+AC_INIT([randomForestSGT], [0.0.1.46], [ubk@kogalur.com], [randomForestSGT], [https://github.com/kogalur/randomForestSGT])
 
 AC_PREREQ([2.62])
 

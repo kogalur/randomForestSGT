@@ -378,7 +378,6 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
         }  
       }  
     }  
-    RF_nativePrint("\n TEST 10:   %10d %10d", serverExit, live);
   } while (serverExit == FALSE);
   for (listen_i = 0; listen_i <= max_sd; ++listen_i) {
     if (FD_ISSET(listen_i, &master_set)) {

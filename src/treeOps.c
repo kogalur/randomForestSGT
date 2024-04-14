@@ -220,7 +220,6 @@ char growTreeLOT (uint treeID, Node *root) {
   greedyMembr = makeGreedyObj(root, greedyHead);
   greedyHead -> fwdLink = greedyMembr;
   greedyMembr -> bakLink = greedyHead;
-  growFlag = TRUE;
   root -> augm = getAugmentationObjGeneric(SG_augmObjCommon, treeID, root);
   root -> yHatAbsoluteLasso = dvector(1, root -> nSize);
   root -> yHatAbsoluteCart  = dvector(1, root -> nSize);
@@ -258,6 +257,14 @@ char growTreeLOT (uint treeID, Node *root) {
     }
   }
   lotObj = makeLatOptTreeObj(SG_lotLag);
+  if ( (hcut >= 1) &&
+       !(root -> hcut >= 1) &&
+       !(SG_optLocal & ((SG_OPT_SWTCH_TWO) | (SG_OPT_SWTCH_THREE) | (SG_OPT_SWTCH_FOUR) | (SG_OPT_SWTCH_FIVE) | (SG_OPT_SWTCH_SIX))) ) {
+    growFlag = FALSE;
+  }
+  else {
+    growFlag = TRUE;
+  }
   while (growFlag) {
     greedyMembr = greedyHead -> fwdLink;
     while (greedyMembr != NULL) {
