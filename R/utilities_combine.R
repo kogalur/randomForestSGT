@@ -4,7 +4,6 @@ rfsgt.combine <- function(formula,
                           ntree = 10,
                           treesize = NULL,
                           tune = TRUE,
-                          cart.lasso = FALSE,
                           filter = NULL,##hot-encoded hcut base-learner features to keep
                           ...
                           )
@@ -24,6 +23,6 @@ rfsgt.combine <- function(formula,
   ## make nfold-parallelized single SGT calls
   lapply(1:ntree, function(nt) {
     do.call("rfsgt", c(list(formula, dta,
-               hcut=1, ntree=1, treesize=treesize, tune=tune, cart.lasso=cart.lasso), dots))
+               hcut=1, ntree=1, treesize=treesize, tune=tune), dots))
   })
 }

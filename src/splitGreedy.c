@@ -11,6 +11,7 @@
     
 
 #include "splitGreedy.h"
+#include "greedyOps.h"
 #include "greedyInfo.h"
 #include "splitInfoDerived.h"
 #include "augmentationOpsCommon.h"
@@ -25,136 +26,6 @@
 #include "cvRegr.h"
 #include "cdlUtil.h"
 #include "cdlInfo.h"
-GreedyObj *makeGreedyObj(Node *parent, GreedyObj *head) {
-  GreedyObj *greedyObj = (GreedyObj*) gblock((size_t) sizeof(GreedyObj));
-  greedyObj -> parent = parent;
-  greedyObj -> parentCart = parent;
-  greedyObj -> left = NULL;
-  greedyObj -> right= NULL;
-  greedyObj -> leftCart = NULL;
-  greedyObj -> rightCart = NULL;
-  greedyObj -> fwdLink = NULL;
-  greedyObj -> bakLink = NULL;
-  greedyObj -> head = head;
-  greedyObj -> splitInfoDerived = NULL;
-  greedyObj -> splitInfoDerivedCart = NULL;
-  greedyObj -> leafFlag = FALSE;
-  greedyObj -> eRiskLoss = RF_nativeNaN;
-  greedyObj -> bestSplitType = 0;
-  return greedyObj;
-}
-void freeGreedyObj(GreedyObj *gObj) {
-  if (gObj -> splitInfoDerived != NULL) {
-    freeSplitInfoDerived(gObj -> splitInfoDerived, gObj -> parent -> augm -> common);
-  }
-  if (gObj -> splitInfoDerivedCart != NULL) {
-    freeSplitInfoDerived(gObj -> splitInfoDerivedCart, gObj -> parent -> augm -> common);
-  }
-  if (gObj -> left != NULL) {
-    freeNode(gObj -> left);
-  }
-  if (gObj -> right != NULL) {
-    freeNode(gObj -> right);
-  }
-  if (gObj -> leftCart != NULL) {
-    freeNode(gObj -> leftCart);
-  }
-  if (gObj -> rightCart != NULL) {
-    freeNode(gObj -> rightCart);
-  }
-  free_gblock(gObj, (size_t) sizeof(GreedyObj));
-}
-void freeGreedyObjList(GreedyObj *gObj) {
-  if (gObj -> fwdLink != NULL) {
-    freeGreedyObjList(gObj -> fwdLink);
-  }
-  freeGreedyObj(gObj);
-}
-double getNegLogLikelihood(uint    treeID,
-                           double *response,
-                           uint    maxLevel,
-                           char    selectFlag,
-                           char   *membershipFlag,
-                           uint   *repMembrIndx,
-                           uint    repMembrSize,
-                           uint   *allMembrIndx,
-                           uint    allMembrSize) {
-  uint i, k;
-  double *piHat;
-  double result;
-  piHat = dvector(1, maxLevel);
-  for (k = 1; k <= maxLevel; k++) {
-    piHat[k] = 0.0;
-  }
-  for (i = 1; i <= repMembrSize; i++) {
-    piHat[(uint) response[repMembrIndx[i]]] += 1.0; 
-  }
-  for (k = 1; k <= maxLevel; k++) {
-    piHat[k] = piHat[k] / repMembrSize;
-  }
-  result = 0.0;
-  if (allMembrSize == 0) {
-    for (i = 1; i <= repMembrSize; i++) {
-      if (piHat[(uint) response[repMembrIndx[i]]] > 0) {
-        result -= log(piHat[(uint) response[repMembrIndx[i]]]);
-      }
-    }
-  }
-  else {
-    for (i = 1; i <= allMembrSize; i++) {
-      if (membershipFlag[allMembrIndx[i]] == selectFlag) {
-        if (piHat[(uint) response[allMembrIndx[i]]] > 0) {
-          result -= log(piHat[(uint) response[allMembrIndx[i]]]);
-        }
-      }
-    }
-  }
-  free_dvector(piHat, 1, maxLevel);
-  return result;
-}
-LatOptTreeObj *makeLatOptTreeObj(uint lag) {
-  LatOptTreeObj *lotObj = (LatOptTreeObj*) gblock((size_t) sizeof(LatOptTreeObj));
-  lotObj -> lag = lag;
-  lotObj -> risk  = dvector(1, lag + 1);
-  for (uint i = 1; i <= lag; i++) {
-    lotObj -> risk[i]  = 0.0;
-  }
-  lotObj -> firstIn = 0;
-  lotObj -> lastIn  = 0;
-  lotObj -> size = 0;
-  lotObj -> strikeout = 0;
-  lotObj -> firstOD = 0.0;
-  lotObj -> treeSize = 1;
-  return lotObj;
-}
-void freeLatOptTreeObj(LatOptTreeObj *lotObj) {
-  free_dvector(lotObj -> risk,  1, lotObj -> lag + 1);
-  free_gblock(lotObj, (size_t) sizeof(LatOptTreeObj));
-}
-void insertRisk(uint treeID, LatOptTreeObj *obj, double value) {
-  double normalizedValue;
-  if (obj -> lag > 0) {
-    normalizedValue = value / (obj -> lag);
-    if (obj -> size < (obj -> lag)) {
-      if (obj -> size == 0) {
-        (obj -> firstIn) ++;
-      }
-      else {
-      }
-      obj -> firstOD = obj -> firstOD + normalizedValue;
-      (obj -> size) ++;
-      (obj -> lastIn) ++;
-    }
-    else {
-      double saveFirstOD = obj -> firstOD; 
-      obj -> firstOD = obj -> firstOD - obj -> risk[obj -> firstIn] + normalizedValue;
-      obj -> strikeout = (obj -> strikeout) + (((obj -> firstOD - saveFirstOD)) > 0 ? 1:0);
-      if ((++ (obj -> lastIn))  > (obj -> lag)) obj -> lastIn  = 1;
-      if ((++ (obj -> firstIn)) > (obj -> lag)) obj -> firstIn = 1;
-    }
-    obj -> risk[obj -> lastIn] = normalizedValue;
-  }
-}
 char getBestSplit(uint treeID, LatOptTreeObj *lotObj, GreedyObj *greedyMembr) {
   Node     *parent;
   NodeBase *parentBase;
@@ -221,7 +92,12 @@ char getBestSplit(uint treeID, LatOptTreeObj *lotObj, GreedyObj *greedyMembr) {
       else {
       }
     }  
-    if ( !( (resultLasso == FALSE) && ( !(SG_optLocal & ((SG_OPT_SWTCH_TWO) | (SG_OPT_SWTCH_THREE) | (SG_OPT_SWTCH_FOUR) | (SG_OPT_SWTCH_FIVE) | (SG_OPT_SWTCH_SIX))) ) ) ) {
+    if ( (parent -> augm -> common -> hcut >= 1) &&
+         (resultLasso == FALSE) &&
+         !(SG_optLocal & ((SG_OPT_SWTCH_TWO) | (SG_OPT_SWTCH_THREE) | (SG_OPT_SWTCH_FOUR) | (SG_OPT_SWTCH_FIVE) | (SG_OPT_SWTCH_SIX))) ) {
+      result = FALSE;
+    }
+    else {
       greedyMembr -> splitInfoDerivedCart = makeSplitInfoDerived(parent -> augm -> common);
       localSplitIndicator = ((SplitInfoMax *) (greedyMembr -> splitInfoDerivedCart)) -> indicator;
       for (i = 1; i <= allMembrSize; i++) {
@@ -414,9 +290,6 @@ char getBestSplit(uint treeID, LatOptTreeObj *lotObj, GreedyObj *greedyMembr) {
           greedyMembr -> eRiskLoss = eRiskLossCart;
         }
       }
-    }
-    else {
-      result = FALSE;
     }
   }  
   return result;

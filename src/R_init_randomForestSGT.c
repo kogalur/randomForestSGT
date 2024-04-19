@@ -19,7 +19,8 @@ extern SEXP entryGrow(SEXP, SEXP, SEXP, SEXP,
                       SEXP, SEXP, SEXP, SEXP,
                       SEXP, SEXP, SEXP, SEXP,
                       SEXP, SEXP, SEXP, SEXP,
-                      SEXP, SEXP, SEXP, SEXP);
+                      SEXP, SEXP, SEXP, SEXP,
+                      SEXP);
 extern SEXP entryPred(SEXP, SEXP, SEXP, SEXP,
                       SEXP, SEXP, SEXP, SEXP,
                       SEXP, SEXP, SEXP, SEXP,
@@ -36,7 +37,7 @@ extern SEXP entryCDL(SEXP, SEXP, SEXP, SEXP,
                      SEXP, SEXP, SEXP, SEXP,
                      SEXP, SEXP, SEXP);
 static const R_CallMethodDef CallEntries[] = {
-    {"entryGrow", (DL_FUNC) &entryGrow, 24},
+    {"entryGrow", (DL_FUNC) &entryGrow, 25},
     {"entryPred", (DL_FUNC) &entryPred, 42},
     {"entryCDL",  (DL_FUNC) &entryCDL,  15},
     {NULL, NULL, 0}

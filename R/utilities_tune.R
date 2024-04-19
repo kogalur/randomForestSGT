@@ -28,7 +28,7 @@ tune.rfsgt <- function(f, data, hcut=3,
   }
   ## dimension reduction for each hcut
   dots <- list()
-  dots$cart.lasso <- dots$tune <- FALSE
+  dots$tune <- FALSE
   dots$ntree <- 1
   dots$bootstrap <- "none"
   xd <- lapply(hcutSeq, function(hcut) {
@@ -55,7 +55,7 @@ tune.rfsgt <- function(f, data, hcut=3,
   folds <- cv.folds(N, nfolds)
   dots <- list()
   dots$hcut <- 1
-  dots$cart.lasso <- dots$tune <- dots$filter <- FALSE
+  dots$tune <- dots$filter <- FALSE
   if (ntree==1) {
     dots$bootstrap <- "none"
   }

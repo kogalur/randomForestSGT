@@ -152,6 +152,20 @@ get.rf.cores <- function () {
   }
   return (getOption("rf.cores", -1L))
 }
+get.weight <- function(weight, n) {
+  ## set the default weight
+  if (!is.null(weight)) {
+    if (any(weight < 0)      ||
+      length(weight) != n  ||
+      any(is.na(weight))) {
+        stop("Invalid weight vector specified.")
+    }
+  }
+  else {
+    weight <- rep(1, n)
+  }
+  return (weight)
+}
 ## Real time predicton option:
 is.hidden.rt <-  function(dots) {
   if (is.null(dots$real.time)) {

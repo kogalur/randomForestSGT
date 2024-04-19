@@ -37,6 +37,7 @@ SEXP entryGrow(SEXP traceFlag,
                SEXP yInfo,
                SEXP yLevels,
                SEXP yData,
+               SEXP timeInterest,
                SEXP xInfo,
                SEXP xLevels,
                SEXP xData,
@@ -57,14 +58,18 @@ SEXP entryGrow(SEXP traceFlag,
   RF_ntree                = INTEGER(ntree)[0];
   RF_observationSize      = INTEGER(observationSize)[0];
   RF_subjSize             = RF_observationSize;
+  RF_subjWeight           = NULL;
   RF_bootstrapSize        = RF_observationSize;
   RF_bootstrapIn          = NULL;
   if(VECTOR_ELT(sampleInfo, 0) != R_NilValue) {
     RF_subjSize = INTEGER(VECTOR_ELT(sampleInfo, 0))[0];
-    if(VECTOR_ELT(sampleInfo, 1) != R_NilValue) {  
-      RF_bootstrapSize = INTEGER(VECTOR_ELT(sampleInfo, 1))[0];
-      if(VECTOR_ELT(sampleInfo, 2) != R_NilValue) {
-        RF_bootstrapIn = (uint **) copy2DObject(VECTOR_ELT(sampleInfo, 2), NATIVE_TYPE_INTEGER, TRUE, RF_ntree, RF_subjSize);
+    if(VECTOR_ELT(sampleInfo, 1) != R_NilValue) {
+      RF_subjWeight = REAL(VECTOR_ELT(sampleInfo, 1)); RF_subjWeight--;
+    }
+    if(VECTOR_ELT(sampleInfo, 2) != R_NilValue) {  
+      RF_bootstrapSize = INTEGER(VECTOR_ELT(sampleInfo, 2))[0];
+      if(VECTOR_ELT(sampleInfo, 3) != R_NilValue) {
+        RF_bootstrapIn = (uint **) copy2DObject(VECTOR_ELT(sampleInfo, 3), NATIVE_TYPE_INTEGER, TRUE, RF_ntree, RF_subjSize);
       }
     }
     else {
@@ -132,6 +137,17 @@ SEXP entryGrow(SEXP traceFlag,
   else {
     RF_rLevelsCnt = NULL;
   }
+  if(VECTOR_ELT(yInfo, 4) != R_NilValue) {
+    RF_subjIn             =  (uint *) INTEGER(VECTOR_ELT(yInfo, 4));  RF_subjIn --;
+  }
+  else {
+    RF_subjIn             = NULL;
+  }
+  RF_eventTypeSize      =  INTEGER(VECTOR_ELT(yInfo, 5))[0];
+  RF_eventType        = NULL;
+  if (RF_eventTypeSize > 0) {
+    RF_eventType        =  (uint *) INTEGER(VECTOR_ELT(yInfo, 6));  RF_eventType --;
+  }
   RF_rLevelsSEXP = yLevels;
   RF_rLevels = NULL;
   if(RF_ySize > 0) {
@@ -139,6 +155,12 @@ SEXP entryGrow(SEXP traceFlag,
   }
   else {
     RF_responseIn = NULL;
+  }
+  RF_timeInterest = NULL;
+  RF_timeInterestSize = INTEGER(VECTOR_ELT(timeInterest, 0))[0];
+  if (RF_timeInterestSize > 0) {
+    RF_timeInterest = (double *) REAL(VECTOR_ELT(timeInterest, 1));
+    RF_timeInterest --;
   }
   RF_xSize                 = INTEGER(VECTOR_ELT(xInfo, 0))[0];
   if(VECTOR_ELT(xInfo, 1) != R_NilValue) {
@@ -301,14 +323,18 @@ SEXP entryPred(SEXP traceFlag,
   RF_ntree                = INTEGER(ntree)[0];
   RF_observationSize      = INTEGER(observationSize)[0];
   RF_subjSize             = RF_observationSize;
+  RF_subjWeight           = NULL;
   RF_bootstrapSize        = RF_observationSize;
   RF_bootstrapIn          = NULL;
   if(VECTOR_ELT(sampleInfo, 0) != R_NilValue) {
     RF_subjSize = INTEGER(VECTOR_ELT(sampleInfo, 0))[0];
-    if(VECTOR_ELT(sampleInfo, 1) != R_NilValue) {  
-      RF_bootstrapSize = INTEGER(VECTOR_ELT(sampleInfo, 1))[0];
-      if(VECTOR_ELT(sampleInfo, 2) != R_NilValue) {
-        RF_bootstrapIn = (uint **) copy2DObject(VECTOR_ELT(sampleInfo, 2), NATIVE_TYPE_INTEGER, TRUE, RF_ntree, RF_subjSize);
+    if(VECTOR_ELT(sampleInfo, 1) != R_NilValue) {
+      RF_subjWeight = REAL(VECTOR_ELT(sampleInfo, 1)); RF_subjWeight--;
+    }
+    if(VECTOR_ELT(sampleInfo, 2) != R_NilValue) {  
+      RF_bootstrapSize = INTEGER(VECTOR_ELT(sampleInfo, 2))[0];
+      if(VECTOR_ELT(sampleInfo, 3) != R_NilValue) {
+        RF_bootstrapIn = (uint **) copy2DObject(VECTOR_ELT(sampleInfo, 3), NATIVE_TYPE_INTEGER, TRUE, RF_ntree, RF_subjSize);
       }
     }
     else {
@@ -343,6 +369,17 @@ SEXP entryPred(SEXP traceFlag,
   }
   else {
     RF_rLevelsCnt = NULL;
+  }
+  if(VECTOR_ELT(yInfo, 4) != R_NilValue) {
+    RF_subjIn             =  (uint *) INTEGER(VECTOR_ELT(yInfo, 4));  RF_subjIn --;
+  }
+  else {
+    RF_subjIn             = NULL;
+  }
+  RF_eventTypeSize      =  INTEGER(VECTOR_ELT(yInfo, 5))[0];
+  RF_eventType        = NULL;
+  if (RF_eventTypeSize > 0) {
+    RF_eventType        =  (uint *) INTEGER(VECTOR_ELT(yInfo, 6));  RF_eventType --;
   }
   RF_rLevelsSEXP = yLevels;
   RF_rLevels = NULL;

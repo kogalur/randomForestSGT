@@ -162,7 +162,7 @@ vimp.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3,
   ##
   ##-------------------------------------------------------------------
   dots <- list(...)
-  dots$cart.lasso <- dots$tune <- dots$filter <- FALSE
+  dots$tune <- dots$filter <- FALSE
   dots$perf.type <- "none"
   dots$experimental.bits <- integer(0)
   ##-------------------------------------------------------------------

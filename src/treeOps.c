@@ -17,6 +17,7 @@
 #include "sgtMain.h"
 #include "termOps.h"
 #include "greedyInfo.h"
+#include "greedyOps.h"
 #include "splitGreedy.h"
 #include "splitRegr.h"
 #include "processEnsemble.h"
@@ -677,9 +678,13 @@ void saveTree(uint treeID, NodeBase *parent, ulong *offset, ulong *offsetCT, ulo
       SG_yBar_ptr[treeID][*offset] = RF_nativeNaN;
     }
     else {
-      SG_betaZ_ptr[treeID][*offset] = ((Node *) (parent -> parent)) -> splitInfoDerived -> beta[1];
-      for (jj = 1; jj <= hcutCnt; jj++) {
-        SG_betaP_ptr[treeID][jj][*offset] = ((Node *) (parent -> parent)) -> splitInfoDerived -> beta[1 + jj];
+      if ((*offset) == 1) {
+      }
+      else {
+        SG_betaZ_ptr[treeID][*offset] = ((Node *) (parent -> parent)) -> splitInfoDerived -> beta[1];
+        for (jj = 1; jj <= hcutCnt; jj++) {
+          SG_betaP_ptr[treeID][jj][*offset] = ((Node *) (parent -> parent)) -> splitInfoDerived -> beta[1 + jj];
+        }
       }
       SG_yBar_ptr[treeID][*offset] = ((Node *) parent) -> mean;      
     }

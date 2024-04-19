@@ -49,7 +49,7 @@ get.beta <- function(o, bag = c("inbag", "oob", "all")[1], papply = lapply) {
     x <- cbind(x, o$xvar.augment)
   }
   ## add useful attributes
-  lasso.percent <- 100 * mean(is.na(ystar[c(idx)]))
+  lasso.percent <- 100 * mean(is.na(ystar[nativeArray$brnodeID == 0]) & is.na(ybar[nativeArray$brnodeID == 0]))
   predicted <- rowSums(x * beta, na.rm=TRUE)
   partial <- x * beta
   ## return the goodies

@@ -39,11 +39,6 @@ char processDefaultGrow(void) {
   if (!(RF_opt & OPT_OENS)) {
     RF_opt = RF_opt & (~OPT_PERF);
   }
-  RF_subjSize             = 0;
-  RF_subjWeight           = NULL;
-  RF_subjIn               = NULL;
-  RF_eventTypeSize        = 0;
-  RF_eventType            = NULL;
   RF_getTree              = NULL;
   RF_xWeight = RF_yWeight = RF_xWeightStat = NULL;  
   return RF_GROW;

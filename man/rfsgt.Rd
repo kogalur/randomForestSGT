@@ -20,7 +20,7 @@ rfsgt(formula,
       tune = FALSE,
       filter = (hcut > 1),
       fast = TRUE,
-      cart.lasso = (hcut < 2),
+      pure.lasso = FALSE,
       eps = .005,
       maxit = 500,
       nfolds = 10,
@@ -65,16 +65,11 @@ rfsgt(formula,
 
   \item{fast}{Use fast filtering?}
     
-  \item{cart.lasso}{Logical value specifying whether CART splits should
-    be used to split a tree node in place of lasso when CART is better
-    at reducing empirical risk for the node.  This generally speeds up
-    calculations but it can impact performance, especially for
-    \code{hcut} greater than 1.  In the latter case, the option can be
-    be useful in situations where numerical instability occurs for the
-    lasso (see the boston housing factor example below for
-    illustration). Note that as an intended side effect, when
-    \code{cart.lasso} is in on, and \code{hcut} is larger than 1,
-    adaptive tree size is automatically turned off.}
+  \item{pure.lasso}{Logical value specifying whether lasso splitting
+  should be strictly adhered to.  In general, lasso splits are replaced
+  with CART whenever numerical instability occurs (for example small
+  sample sizes in a node may make it impossible to obtain the cross-validated
+  lasso parameter).}
   
   \item{eps}{Parameter used by \code{cdlasso}.}
 
@@ -127,7 +122,8 @@ rfsgt(formula,
   A flexible class of parametric models are used for tree splitting
   using lasso.  This includes CART splits, hyperplane, ellipsoid and
   hyperboloid cuts.  Coordinate descent is used for fast calculation of
-  the penalized lasso parametric models.
+  the penalized lasso parametric models.  Cross-validation is employed
+  to obtain the lasso regularization parameter.
 
   These trees are called super greedy trees (SGTs) and are constructed
   using best split first (BSF) where cuts are made sequentially in order
@@ -222,8 +218,8 @@ Boston$rm <- factor(round(Boston$rm))
 ## random forest: hcut=0 
 print(rfsgt(medv~., Boston, hcut=0, nodesize=1, ntree=500))
 
-## hcut=3 with cart.lasso TRUE
-print(rfsgt(medv~., Boston, hcut=3, cart.lasso=TRUE))
+## hcut=3
+print(rfsgt(medv~., Boston, hcut=3))
 
 
 ## ------------------------------------------------------------
@@ -318,6 +314,7 @@ if (library("interp", logical.return = TRUE)) {
 
 ## ------------------------------------------------------------
 ##  friedman illustration of OOB empirical risk
+##  note: tune=TRUE is required to obtain empirical risk
 ## ------------------------------------------------------------
 
 ## simulate friedman
@@ -370,65 +367,37 @@ plot(1:o2$ntree, o2$err.rate, type="s", xlab="Trees", ylab="SGF OOB error")
 ## synthetic regression examples with different hcut
 ## ------------------------------------------------------------
 
-## friedman 1
-d1 <- data.frame(mlbench:::mlbench.friedman1(500))
-f1 <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
-   cat("hcut:", hcut, "\n")
-   o <- rfsgt(y~., d1, hcut=hcut)
-   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
-})))
-colnames(f1) <- c("hcut", "mse", "smse")
+## simulation functions
+sim <- list(
+     friedman1=function(n){data.frame(mlbench:::mlbench.friedman1(n))},
+     friedman2=function(n){data.frame(mlbench:::mlbench.friedman2(n))},
+     friedman3=function(n){data.frame(mlbench:::mlbench.friedman3(n))},
+     peak=function(n){data.frame(mlbench:::mlbench.peak(n, 10))},       
+     linear=function(n, sd=.1){
+           x=matrix(runif(n*10), n)
+           y=3*x[,1]^3-2*x[,2]^2+3*x[,3]+rnorm(n,sd=sd)
+           data.frame(y=y,x)
+})
 
-## friedman 2
-d2 <- data.frame(mlbench:::mlbench.friedman2(500))
-f2 <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
-   cat("hcut:", hcut, "\n")
-   o <- rfsgt(y~., d2, hcut=hcut)
+## run simulations: we will use pure lasso
+n <- 500
+max.hcut <- 3
+pure.lasso <- TRUE
+results <- lapply(names(sim), function(nm) {
+  cat("simulation:", nm, "\n")
+  d <- sim[[nm]](n=n)
+  rO <- data.frame(do.call(rbind, lapply(0:max.hcut, function(hcut) {
+   cat("     hcut:", hcut, "\n")
+   o <- rfsgt(y~.,d,hcut=hcut,pure.lasso=pure.lasso)
    c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
-})))
-colnames(f2) <- c("hcut", "mse", "smse")
-
-## friedman 3
-d3 <- data.frame(mlbench:::mlbench.friedman3(500))
-f3 <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
-   cat("hcut:", hcut, "\n")
-   o <- rfsgt(y~., d3, hcut=hcut)
-   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
-})))
-colnames(f3) <- c("hcut", "mse", "smse")
-
-## peak 
-dp <- data.frame(mlbench:::mlbench.peak(500, 10))
-peak <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
-   cat("hcut:", hcut, "\n")
-   o <- rfsgt(y~., dp, hcut=hcut)
-   c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
-})))
-colnames(peak) <- c("hcut", "mse", "smse")
-
-## linear model with polynomial terms
-n <- 500; p <- 10; sd <- .1
-x <- matrix(runif(n*p), n)
-y <- 3 * x[,1]^3 - 2*x[,2]^2 + 3*x[,3] + rnorm(n, sd=sd)
-dl <- data.frame(y=y, x)
-linear <- data.frame(do.call(rbind, lapply(0:3, function(hcut) {
-  cat("hcut:", hcut, "\n")
-  o <- rfsgt(y~., dl, hcut=hcut)
-  c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
-})))
-colnames(linear) <- c("hcut", "mse", "smse")
+  })))
+  colnames(rO) <- c("hcut", "mse", "smse")
+  rO
+})
+names(results) <- names(sim)
 
 ## print results
-cat("friedman 1:\n")
-print(f1)
-cat("\n");cat("friedman 2:\n")
-print(f2)
-cat("\n");cat("friedman 3:\n")
-print(f3)
-cat("\n");cat("peak:\n")
-print(peak)
-cat("\n");cat("linear:\n")
-print(linear)
+print(results)
 
 ## ------------------------------------------------------------
 ## iowa housing data 

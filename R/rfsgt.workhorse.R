@@ -7,7 +7,7 @@ rfsgt.workhorse <- function(formula,
                             nodesize = NULL,
                             filter = TRUE,
                             fast = TRUE,
-                            cart.lasso = FALSE,
+                            pure.lasso = FALSE,
                             eps = .005,
                             maxit = 500,
                             nfolds = 10,
@@ -15,8 +15,10 @@ rfsgt.workhorse <- function(formula,
                             bootstrap = c("by.root", "none", "by.user"),
                             samptype = c("swor", "swr"),
                             samp = NULL,
+                            case.wt = NULL,
                             membership = FALSE,
                             sampsize = if (samptype == "swor") function(x){x * .632} else function(x){x},
+                            ntime = 150,
                             seed = NULL,
                             do.trace = FALSE,
                             ...
@@ -32,6 +34,7 @@ rfsgt.workhorse <- function(formula,
   family <- formula.detail$family
   xvar.org.names <- formula.detail$xvar.names
   yvar.names <- formula.detail$yvar.names
+  subj.names <- formula.detail$subj.names
   ## coherence check
   if (!((family == "regr") || (family == "surv"))) {
     stop("this function (currently) only works for regression")
@@ -65,8 +68,6 @@ rfsgt.workhorse <- function(formula,
   }
   ## hot-encode x 
   xvar <- get.hotencode(data[, keep.filter, drop = FALSE])
-  ## don't need the data anymore
-  remove(data)
   ## dimension reduction using tune.rfsgt filtering variables
   baselearner.flag <- TRUE
   augmentX <- augmentXlist <- hcutCnt <- NULL
@@ -126,11 +127,8 @@ rfsgt.workhorse <- function(formula,
       augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
     }
   }
-  ## cart.lasso: experimental bits, tune
-  if (cart.lasso && hcut > 1) {
-    tune <- FALSE
-  }
-  if (is.null(dots$experimental.bits) && !cart.lasso) {
+  ## pure lasso?
+  if (pure.lasso && hcut>0) {
     dots$experimental.bits <- as.integer(0)
   }
   experimental.bits <- as.integer(get.experimental.bits(dots$experimental.bits, hcut))
@@ -171,11 +169,33 @@ rfsgt.workhorse <- function(formula,
   empirical.risk <- TRUE
   forest <- TRUE
   m.target.idx <- 1
+  ## Set default values for time dependent x-variables.  That is,
+  ## assume this is regression or classification. This depends on
+  ## subj.names being initialized above.
   subj <- NULL
   xvar.time <- NULL
   subj.time <- NULL
-  subj.names <- NULL
   subj.unique.count <- n
+  ## Get the indvidual subject identifiers if they exist.
+  subj <- data[, subj.names, drop = FALSE]
+  rownames(subj) <- colnames(subj) <- NULL
+  if(dim(subj)[2] == 0) {
+    ## Override subject if it is not present.
+    subj <- NULL
+  }
+  else {
+    ## Convert to vector.
+    subj <- as.vector(t(subj))
+    subj.unique.count <- length(unique(subj))
+    ## determine which x-variables are time-dependent
+    ## determine which individuals have any time-varying information
+    xvar.time <- get.tdc.cov(data)
+    subj.time <- get.tdc.subj.time(data)
+  }
+  ## don't need the data anymore
+  remove(data)
+  ## Get event information and dimensioning for families
+  event.info <- get.grow.event.info(yvar, family, ntime = ntime)
   ## initialize samptype
   samptype <- match.arg(samptype, c("swor", "swr"))
   ## bootstrap specifics
@@ -190,18 +210,19 @@ rfsgt.workhorse <- function(formula,
     }
     else {
       ## convert user passed sample size to a function
-      sampsize.function <- make.samplesize.function(sampsize / n)
+      sampsize.function <- make.samplesize.function(sampsize / subj.unique.count)
     }
-    sampsize <- round(sampsize.function(n))
+    sampsize <- round(sampsize.function(subj.unique.count))
     if (sampsize < 1) {
       stop("sampsize must be greater than zero")
     }
     ## for swor size is limited by the number of cases
-    if (samptype == "swor" && (sampsize > n)) {
-      sampsize <- n
+    if (samptype == "swor" && (sampsize > subj.unique.count)) {
+      sampsize <- subj.unique.count
       sampsize.function <- function(x){x}
     }
     samp <- NULL
+    case.wt  <- get.weight(case.wt, subj.unique.count)
   }
   else if (bootstrap == "by.user") {    
     ## check for coherent sample: it will of be dim [.] x [ntree]
@@ -218,12 +239,14 @@ rfsgt.workhorse <- function(formula,
     }
     ## set the sample size and function
     sampsize <- sampsize[1]
-    sampsize.function <- make.samplesize.function(sampsize[1] / n)
+    sampsize.function <- make.samplesize.function(sampsize[1] / subj.unique.count)
+    case.wt  <- get.weight(NULL, subj.unique.count)
   }
   ## This is "none".
   else {
-    sampsize <- n
+    sampsize <- subj.unique.count
     sampsize.function <- function(x){x}
+    case.wt  <- get.weight(case.wt, sampsize)
   }
   ## Turn performance output off unless bootstrapping by root or user.
   if ((bootstrap != "by.root") && (bootstrap != "by.user")) {
@@ -274,7 +297,8 @@ rfsgt.workhorse <- function(formula,
                                              experimental.bits),  ## rfsgt (local experimental) option word
                                   as.integer(ntree),
                                   as.integer(n),
-                                  list(as.integer(n),
+                                  list(as.integer(subj.unique.count),
+                                       if (is.null(case.wt)) NULL else as.double(case.wt),
                                        as.integer(sampsize),
                                        if (is.null(samp)) NULL else as.integer(samp)),
                                   as.integer(splitinfo$index),
@@ -287,7 +311,10 @@ rfsgt.workhorse <- function(formula,
                                   list(as.integer(length(yvar.types)),
                                        if (is.null(yvar.types)) NULL else as.character(yvar.types),
                                        if (is.null(yvar.types)) NULL else as.integer(yvar.nlevels),
-                                       if (is.null(yvar.numeric.levels)) NULL else sapply(1:length(yvar.numeric.levels), function(nn) {as.integer(length(yvar.numeric.levels[[nn]]))})),
+                                       if (is.null(yvar.numeric.levels)) NULL else sapply(1:length(yvar.numeric.levels), function(nn) {as.integer(length(yvar.numeric.levels[[nn]]))}),
+                                       if (is.null(subj)) NULL else as.integer(subj),
+                                       if (is.null(event.info)) as.integer(0) else as.integer(length(event.info$event.type)),
+                                       if (is.null(event.info)) NULL else as.integer(event.info$event.type)),
                                   if (is.null(yvar.numeric.levels)) {
                                     NULL
                                   }
@@ -295,7 +322,9 @@ rfsgt.workhorse <- function(formula,
                                     lapply(1:length(yvar.numeric.levels),
                                            function(nn) {as.integer(yvar.numeric.levels[[nn]])})
                                   },
-                                  if (is.null(yvar.types)) NULL else as.double(as.vector(yvar)),
+                                  if (is.null(yvar.types)) NULL else as.double(as.vector(data.matrix(yvar))),
+                                  list(if(is.null(event.info$time.interest)) as.integer(0) else as.integer(length(event.info$time.interest)),
+                                       if(is.null(event.info$time.interest)) NULL else as.double(event.info$time.interest)),
                                   list(as.integer(n.xvar),
                                        as.character(xvar.types),
                                        if (is.null(xvar.types)) NULL else as.integer(xvar.nlevels),
@@ -382,7 +411,7 @@ rfsgt.workhorse <- function(formula,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
                       ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
-                      version = "0.0.1.46")
+                      version = "0.0.1.48")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL

@@ -42,6 +42,11 @@ predict.rfsgt.workhorse <-  function(object,
   samptype <- object$samptype
   sampsize <- object$sampsize
   samp <- object$samp
+  ## Ignore TDC for now in predict mode.
+  subj.unique.count  <- object$n
+  case.wt  <- get.weight(NULL, subj.unique.count)
+  subj  <- NULL;
+  event.info  <- NULL
   ## obtain y-outcome information from the grow object 
   yvar <- object$yvar
   yvar.names <- object$yvar.names
@@ -86,7 +91,7 @@ predict.rfsgt.workhorse <-  function(object,
   }
   else {
     object.version <- as.integer(unlist(strsplit(object$version, "[.]")))
-    installed.version <- as.integer(unlist(strsplit("0.0.1.46", "[.]")))
+    installed.version <- as.integer(unlist(strsplit("0.0.1.48", "[.]")))
     minimum.version <- as.integer(unlist(strsplit("0.0.0.0", "[.]")))
     object.version.adj <- object.version[1] + (object.version[2]/10) + (object.version[3]/100)
     installed.version.adj <- installed.version[1] + (installed.version[2]/10) + (installed.version[3]/100)
@@ -201,8 +206,9 @@ predict.rfsgt.workhorse <-  function(object,
                                   as.integer(omp.bits +
                                              real.time.bits),  ## rfsgt (local and experimental) option word
                                   as.integer(ntree),
-                                  as.integer(nrow(xvar)),
-                                  list(as.integer(nrow(xvar)),
+                                  as.integer(object$n),
+                                  list(as.integer(subj.unique.count),
+                                       if (is.null(case.wt)) NULL else as.double(case.wt),
                                        as.integer(sampsize),
                                        if (is.null(samp)) NULL else as.integer(samp)),
                                   as.integer(hcut),
@@ -212,7 +218,10 @@ predict.rfsgt.workhorse <-  function(object,
                                   list(as.integer(length(yvar.types)),
                                        if (is.null(yvar.types)) NULL else as.character(yvar.types),
                                        if (is.null(yvar.types)) NULL else as.integer(yvar.nlevels),
-                                       if (is.null(yvar.numeric.levels)) NULL else sapply(1:length(yvar.numeric.levels), function(nn) {as.integer(length(yvar.numeric.levels[[nn]]))})),
+                                       if (is.null(yvar.numeric.levels)) NULL else sapply(1:length(yvar.numeric.levels), function(nn) {as.integer(length(yvar.numeric.levels[[nn]]))}),
+                                       if (is.null(subj)) NULL else as.integer(subj),
+                                       if (is.null(event.info)) as.integer(0) else as.integer(length(event.info$event.type)),
+                                       if (is.null(event.info)) NULL else as.integer(event.info$event.type)),
                                   if (is.null(yvar.numeric.levels)) {
                                     NULL
                                   }
