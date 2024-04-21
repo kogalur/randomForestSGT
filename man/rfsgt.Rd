@@ -67,9 +67,10 @@ rfsgt(formula,
     
   \item{pure.lasso}{Logical value specifying whether lasso splitting
   should be strictly adhered to.  In general, lasso splits are replaced
-  with CART whenever numerical instability occurs (for example small
-  sample sizes in a node may make it impossible to obtain the cross-validated
-  lasso parameter).}
+  with CART whenever numerical instability occurs (for example, small
+  node sample sizes may make it impossible to obtain the cross-validated
+  lasso parameter).  This option will generally produce shallow trees which
+  not be appropriate in all settings.}
   
   \item{eps}{Parameter used by \code{cdlasso}.}
 

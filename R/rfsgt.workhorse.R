@@ -169,33 +169,11 @@ rfsgt.workhorse <- function(formula,
   empirical.risk <- TRUE
   forest <- TRUE
   m.target.idx <- 1
-  ## Set default values for time dependent x-variables.  That is,
-  ## assume this is regression or classification. This depends on
-  ## subj.names being initialized above.
   subj <- NULL
   xvar.time <- NULL
   subj.time <- NULL
+  event.info <- NULL
   subj.unique.count <- n
-  ## Get the indvidual subject identifiers if they exist.
-  subj <- data[, subj.names, drop = FALSE]
-  rownames(subj) <- colnames(subj) <- NULL
-  if(dim(subj)[2] == 0) {
-    ## Override subject if it is not present.
-    subj <- NULL
-  }
-  else {
-    ## Convert to vector.
-    subj <- as.vector(t(subj))
-    subj.unique.count <- length(unique(subj))
-    ## determine which x-variables are time-dependent
-    ## determine which individuals have any time-varying information
-    xvar.time <- get.tdc.cov(data)
-    subj.time <- get.tdc.subj.time(data)
-  }
-  ## don't need the data anymore
-  remove(data)
-  ## Get event information and dimensioning for families
-  event.info <- get.grow.event.info(yvar, family, ntime = ntime)
   ## initialize samptype
   samptype <- match.arg(samptype, c("swor", "swr"))
   ## bootstrap specifics
@@ -411,7 +389,7 @@ rfsgt.workhorse <- function(formula,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
                       ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
-                      version = "0.0.1.48")
+                      version = "0.0.1.49")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL
