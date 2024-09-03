@@ -26,11 +26,10 @@
 #include "shared/terminalBase.h"
 #include "shared/nrutil.h"
 #include "shared/restoreTree.h"
-#include "shared/assignTermNodeInfo.h"
 #include "shared/bootstrap.h"
 #include "shared/nodeBaseOps.h"
 #include "shared/termBaseOps.h"
-#include "shared/polarity.h"
+#include "shared/polarityNew.h"
 #include "shared/error.h"
 void acquireTree(char mode, uint treeID) {
   Node     *root;
@@ -49,13 +48,11 @@ void acquireTree(char mode, uint treeID) {
   xSize = SG_augmObjCommon -> pSize;
   nSizeTest = RF_fobservationSize;
   stackMembershipVectors(nSize,
-                         RF_identityMembershipIndexSize,
                          &RF_bootMembershipFlag[treeID],
                          &RF_oobMembershipFlag[treeID],
                          &RF_bootMembershipCount[treeID],
                          &RF_ibgMembershipIndex[treeID],
-                         &RF_oobMembershipIndex[treeID],
-                         &RF_bootMembershipIndex[treeID]);
+                         &RF_oobMembershipIndex[treeID]);
   stackFactorInSitu(treeID,
                     RF_rFactorCount,
                     RF_xFactorCount,
@@ -105,7 +102,6 @@ void acquireTree(char mode, uint treeID) {
                           RF_bootMembershipFlag,
                           RF_oobMembershipFlag,
                           RF_bootMembershipCount,
-                          RF_bootMembershipIndex,
                           RF_oobSize,
                           RF_ibgSize,
                           RF_ibgMembershipIndex,
@@ -113,14 +109,14 @@ void acquireTree(char mode, uint treeID) {
                           SG_BOOT_CT_ptr);
   if (bootResult) {
     if (mode == RF_GROW) {
-      rootBase -> repMembrIndx = RF_bootMembershipIndex[treeID];
+      rootBase -> repMembrIndx = bootMembrIndx;
       rootBase -> repMembrSize = rootBase -> repMembrSizeAlloc = bootMembrSize;
       SG_yHatAbsolute[treeID] = dvector(1, nSize);
       root -> yHatAbsolute = SG_yHatAbsolute[treeID];
       growTreeLOT(treeID, root);
     }
     else {
-      rootBase -> repMembrIndx = RF_bootMembershipIndex[treeID];
+      rootBase -> repMembrIndx = bootMembrIndx;
       rootBase -> repMembrSize = rootBase -> repMembrSizeAlloc = bootMembrSize;
       SG_yHatAbsolute[treeID] = dvector(1, nSize);
       root -> yHatAbsolute = SG_yHatAbsolute[treeID];
@@ -174,13 +170,11 @@ void acquireTree(char mode, uint treeID) {
                       RF_maxFactorLevel,
                       RF_factorList);
   unstackMembershipVectors(nSize,
-                           RF_identityMembershipIndexSize,
                            RF_bootMembershipFlag[treeID],
                            RF_oobMembershipFlag[treeID],
                            RF_bootMembershipCount[treeID],
                            RF_ibgMembershipIndex[treeID],
-                           RF_oobMembershipIndex[treeID],
-                           RF_bootMembershipIndex[treeID]);
+                           RF_oobMembershipIndex[treeID]);
   freeTree(treeID, rootBase);
 }
 void freeTree(uint treeID, NodeBase *parent) {
@@ -445,15 +439,6 @@ char growTreeLOT (uint treeID, Node *root) {
     RF_leafLinkedObjTail[treeID] = makeAndSpliceLeafLinkedObj(RF_leafLinkedObjTail[treeID]);
     RF_leafLinkedObjTail[treeID] -> nodePtr = parentBase;
     RF_leafLinkedObjTail[treeID] -> termPtr = (TerminalBase *) makeTerminal();
-    initTerminalBase(RF_leafLinkedObjTail[treeID] -> termPtr,
-                     0, 
-                     0, 
-                     0, 
-                     RF_rNonFactorCount,   
-                     RF_rFactorCount,      
-                     RF_rFactorSize,       
-                     RF_rFactorIndex,      
-                     RF_rNonFactorIndex);  
     parentBase -> mate = RF_leafLinkedObjTail[treeID] -> termPtr;
     (RF_leafLinkedObjTail[treeID] -> termPtr) -> mate = parentBase;
     RF_leafLinkedObjTail[treeID] -> nodeID = (RF_leafLinkedObjTail[treeID] -> termPtr) -> nodeID = parentBase -> nodeID;
@@ -465,7 +450,16 @@ char growTreeLOT (uint treeID, Node *root) {
         SG_MEMB_ID_ptr[treeID][parentBase -> allMembrIndx[i]] = parentBase -> nodeID;
       }
     }
-    updateTerminalNodeOutcomesCDL(treeID, (Terminal *) (RF_leafLinkedObjTail[treeID] -> termPtr));
+    initTerminalBase(RF_leafLinkedObjTail[treeID] -> termPtr,
+                     0, 
+                     0, 
+                     0, 
+                     RF_rNonFactorCount,   
+                     RF_rNonFactorIndex,   
+                     RF_rFactorCount,      
+                     RF_rFactorIndex,      
+                     RF_rFactorSize);      
+    calculateAllTerminalNodeOutcomes(RF_GROW, treeID, RF_leafLinkedObjTail[treeID] -> termPtr);
     greedyMembr = greedyMembr -> fwdLink;
   }
   if (RF_opt & OPT_EMPR_RISK) {        
@@ -806,17 +800,17 @@ void restoreTreeLOT(uint treeID, Node *parent, ulong *offsetTree) {
                      0, 
                      0, 
                      RF_rNonFactorCount,   
+                     RF_rNonFactorIndex,   
                      RF_rFactorCount,      
-                     RF_rFactorSize,       
                      RF_rFactorIndex,      
-                     RF_rNonFactorIndex);  
+                     RF_rFactorSize);      
     termPtr -> oobMembrCount = SG_ombrTNodeCT_[SG_offsetCT[treeID]];
-    termPtr -> oobMembrIndx = SG_ombrTNodeID_ + SG_offsetID_ombr[treeID];
-    SG_offsetID_ombr[treeID] += termPtr -> oobMembrCount;
     termPtr -> ibgMembrCount = SG_rmbrTNodeCT_[SG_offsetCT[treeID]];
     SG_offsetCT[treeID] ++;
     termPtr -> ibgMembrIndx = SG_rmbrTNodeID_ + SG_offsetID_rmbr[treeID];
     SG_offsetID_rmbr[treeID] += termPtr -> ibgMembrCount;
+    termPtr -> oobMembrIndx = SG_ombrTNodeID_ + SG_offsetID_ombr[treeID];
+    SG_offsetID_ombr[treeID] += termPtr -> oobMembrCount;
     parentBase -> mate = termBasePtr;
     termBasePtr -> mate = parentBase;
     RF_leafLinkedObjTail[treeID] -> nodeID = (RF_leafLinkedObjTail[treeID] -> termPtr) -> nodeID = parentBase -> nodeID;

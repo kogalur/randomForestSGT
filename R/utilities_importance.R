@@ -1,4 +1,9 @@
-## custom filtering used by workhorse (tried and tested)
+##-------------------------------------------------------------------
+##
+## filter variables - calls the main function "vimp.rfsgt"
+##
+##-------------------------------------------------------------------
+## custom filtering used by workhorse
 filter.custom.rfsgt <- function(f, dta, hcut=1, method="liberal", fast=TRUE, ...) {
   ## hidden options
   dots <- list(...)
@@ -48,7 +53,7 @@ filter.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3, nfolds=5,
   ## call varpro using custom split-weights
   checkfail <- tryCatch({capture.output(vmp <- cv.varpro(f, dta,
           split.weight.custom=swt))}, error=function(ex){NULL})
-  ## return rfsgt vimp if varpro fails 
+  ## return vimp.rfsgt if varpro fails 
   if (is.null(checkfail)) {
     if (original) {
       attr(swt, "xvar.org.names") <- stump$xvar.names
@@ -86,51 +91,9 @@ filter.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3, nfolds=5,
     keep
   }
 }
-get.orgvimp.rfsgt <- function(beta, pretty=FALSE) {
-  ## pull xvar names (original and hot-encoded)
-  xvar.org.names <- attr(beta, "xvar.org.names")
-  xvar.names <- attr(beta, "xvar.names")
-  ## match original variable names to varpro names which uses hot encode data
-  vars <- xvar.org.names[which(unlist(lapply(xvar.org.names, function(nn) {
-    if (any(grepl(nn, names(beta)))) {
-      TRUE
-    }
-    else {
-      FALSE
-    }
-  })))]
-  ## obtain beta for mapped variables
-  vars.beta <- lapply(xvar.org.names, function(nn) {
-    if (any((pt <- grepl(nn, names(beta))))) {
-      if (!all(is.na(beta[pt]))) {
-        max(beta[pt], na.rm = TRUE)
-      }
-      else {
-        0
-      }
-    }
-    else {
-      NULL
-    }
-  })
-  ## remove NULL entries
-  vars.beta <- unlist(vars.beta[!sapply(vars.beta, is.null)])
-  ## make nice table for return
-  if (pretty) {
-    topvars <- data.frame(variable = vars, beta = vars.beta)
-    topvars[order(topvars$beta, decreasing = TRUE),, drop = FALSE]
-  }
-  ## return named vector with beta values (0 if not selected)
-  else {
-    beta <- rep(0, length(xvar.org.names))
-    names(beta) <- xvar.org.names
-    beta[vars] <- vars.beta
-    beta
-  }
-}
 ##-------------------------------------------------------------------
 ##
-## main function used for variable selection
+## main function used for variable selection uses varpro + sgt
 ##
 ##-------------------------------------------------------------------
 vimp.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3,
@@ -207,9 +170,60 @@ vimp.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3,
   attr(beta, "xvar.org.names") <- stump$xvar.names
   beta  
 }
+##----------------------------------------------------------------------
+##
 ## custom print object for vimp.rfsgt to make attributes invisible
+##
+##----------------------------------------------------------------------
 print.vimp.rfsgt <- function(x, ...) {
   attr(x, "class") <- attr(x, "xvar.names") <-
     attr(x, "xvar.org.names") <- NULL
   print(x)
+}
+##----------------------------------------------------------------------
+##
+## custom function for extracting beta from vimp.rfsgt
+##
+##----------------------------------------------------------------------
+get.orgvimp.rfsgt <- function(beta, pretty=FALSE) {
+  ## pull xvar names (original and hot-encoded)
+  xvar.org.names <- attr(beta, "xvar.org.names")
+  xvar.names <- attr(beta, "xvar.names")
+  ## match original variable names to varpro names which uses hot encode data
+  vars <- xvar.org.names[which(unlist(lapply(xvar.org.names, function(nn) {
+    if (any(grepl(nn, names(beta)))) {
+      TRUE
+    }
+    else {
+      FALSE
+    }
+  })))]
+  ## obtain beta for mapped variables
+  vars.beta <- lapply(xvar.org.names, function(nn) {
+    if (any((pt <- grepl(nn, names(beta))))) {
+      if (!all(is.na(beta[pt]))) {
+        max(beta[pt], na.rm = TRUE)
+      }
+      else {
+        0
+      }
+    }
+    else {
+      NULL
+    }
+  })
+  ## remove NULL entries
+  vars.beta <- unlist(vars.beta[!sapply(vars.beta, is.null)])
+  ## make nice table for return
+  if (pretty) {
+    topvars <- data.frame(variable = vars, beta = vars.beta)
+    topvars[order(topvars$beta, decreasing = TRUE),, drop = FALSE]
+  }
+  ## return named vector with beta values (0 if not selected)
+  else {
+    beta <- rep(0, length(xvar.org.names))
+    names(beta) <- xvar.org.names
+    beta[vars] <- vars.beta
+    beta
+  }
 }

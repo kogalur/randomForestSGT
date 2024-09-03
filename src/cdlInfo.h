@@ -11,7 +11,8 @@ struct cdlInfo {
   uint yHatCnt;
   char valid;
   uint lambdaTargetIndx;
-  uint lambda1SEIndx;
+  uint lambda1SEIndxMin;
+  uint lambda1SEIndxMax;
   double *lambdaMeanErr;
   double *lambdaCVSD;
 };

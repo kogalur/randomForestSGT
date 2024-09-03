@@ -21,7 +21,8 @@ void stackCoordinateDescentOutput(CDLInfo   *obj,
                                   double   **yHat,
                                   double  ***yHatPtr,
                                   uint     **lambdaMinIndx,
-                                  uint     **lambda1SEIndx,
+                                  uint     **lambda1SEIndxMin,
+                                  uint     **lambda1SEIndxMax,
                                   double   **lambdaMeanErr,
                                   double   **lambdaCVSD);
 void stackDefinedOutputObjects(char mode);

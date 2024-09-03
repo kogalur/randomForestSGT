@@ -54,7 +54,8 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                   double   **yHat,
                                   double  ***yHatPtr,
                                   uint     **lambdaMinIndx,
-                                  uint     **lambda1SEIndx,
+                                  uint     **lambda1SEIndxMin,
+                                  uint     **lambda1SEIndxMax,
                                   double   **lambdaMeanErr,
                                   double   **lambdaCVSD) {
   uint lambdaGridSizeThinned;
@@ -139,18 +140,30 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                              1,
                                              1);
     (*lambdaMinIndx) --;
-    *lambda1SEIndx = (uint*) stackAndProtect(RF_auxDimConsts,
-                                             RF_GROW,
-                                             &RF_nativeIndex,
-                                             NATIVE_TYPE_INTEGER,
-                                             SG_LAMBDA_1SE,
-                                             1,
-                                             0,
-                                             SG_sexpStringOutgoingCDL,
-                                             NULL,
-                                             1,
-                                             1);
-    (*lambda1SEIndx) --;
+    *lambda1SEIndxMin = (uint*) stackAndProtect(RF_auxDimConsts,
+                                                RF_GROW,
+                                                &RF_nativeIndex,
+                                                NATIVE_TYPE_INTEGER,
+                                                SG_LAMBDA_1SE_MIN,
+                                                1,
+                                                0,
+                                                SG_sexpStringOutgoingCDL,
+                                                NULL,
+                                                1,
+                                                1);
+    (*lambda1SEIndxMin) --;
+    *lambda1SEIndxMax = (uint*) stackAndProtect(RF_auxDimConsts,
+                                                RF_GROW,
+                                                &RF_nativeIndex,
+                                                NATIVE_TYPE_INTEGER,
+                                                SG_LAMBDA_1SE_MAX,
+                                                1,
+                                                0,
+                                                SG_sexpStringOutgoingCDL,
+                                                NULL,
+                                                1,
+                                                1);
+    (*lambda1SEIndxMax) --;
     localRecordCount = lambdaGridSizeThinned;
     *lambdaMeanErr = (double*) stackAndProtect(RF_auxDimConsts,
                                                RF_GROW,

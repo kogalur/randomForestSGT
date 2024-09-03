@@ -4,8 +4,9 @@ rfsgt <- function(formula,
                   hcut = 1,
                   treesize = NULL,
                   nodesize = NULL,
-                  tune = FALSE,
+                  tune.treesize = FALSE,
                   filter = (hcut > 1),
+                  keep.only = NULL,
                   fast = TRUE,
                   pure.lasso = FALSE,
                   eps = .005,
@@ -29,8 +30,9 @@ rfsgt <- function(formula,
                   hcut = hcut,
                   treesize = treesize,
                   nodesize = nodesize,
-                  tune = tune,
+                  tune.treesize = tune.treesize,
                   filter = filter,
+                  keep.only = keep.only,
                   fast = fast,
                   pure.lasso = pure.lasso,
                   eps = eps,
@@ -50,10 +52,12 @@ rfsgt <- function(formula,
     formula.prelim <- parse.formula(formula, data, NULL)
     formula.detail <- finalize.formula(formula.prelim, data)
     family <- formula.detail$family
+    ## hotencode original data
     xvar.org.names <- formula.detail$xvar.names
+    xvar <- get.hotencode(data[, xvar.org.names, drop=FALSE])
     xvar.org.names <- xvar.org.names[sapply(xvar.org.names, function(xv) {
-      any(grepl(xv, rO$xvar.names))})]
-    rO$xvar <- get.hotencode(data[, xvar.org.names, drop=FALSE])
+      any(grepl(xv, rO$xvar.names))})]   
+    xvar <- get.hotencode.subset(xvar, xvar.org.names)
     rO$xvar.names <- colnames(rO$xvar)
     rO$xvar.types <- rep("R", ncol(rO$xvar))
     rO$xvar.nlevels <- rep(0, ncol(rO$xvar))

@@ -116,7 +116,6 @@ void updateEnsemble (char mode, uint treeID) {
     if (!(RF_optHigh & OPT_TERM_OUTG)) {
       leafLinkedPtr = RF_leafLinkedObjHead[treeID] -> fwdLink;
       while (leafLinkedPtr != NULL) {
-        freeTerminalBaseNonSurvivalStructures(leafLinkedPtr -> termPtr);
         leafLinkedPtr = leafLinkedPtr -> fwdLink;
       }
     }
@@ -124,7 +123,6 @@ void updateEnsemble (char mode, uint treeID) {
   default:
     leafLinkedPtr = RF_leafLinkedObjHead[treeID] -> fwdLink;
     while (leafLinkedPtr != NULL) {
-      freeTerminalBaseNonSurvivalStructures(leafLinkedPtr -> termPtr);
       leafLinkedPtr = leafLinkedPtr -> fwdLink;
     }
     break;

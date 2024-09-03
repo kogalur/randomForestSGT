@@ -254,7 +254,7 @@ void cdlMain(char mode, int seedValue) {
   makeTerminal = & makeTerminalDerived;
   freeTerminal = & freeTerminalDerived;
   RF_stackCount = 5;
-  RF_stackCount += 5;
+  RF_stackCount += 6;
   initProtect(RF_stackCount);
   stackAuxiliaryInfoList(&RF_snpAuxiliaryInfoList, RF_stackCount);
   SG_cpuTime_ = (double*) stackAndProtect(RF_auxDimConsts,
@@ -303,7 +303,8 @@ void cdlMain(char mode, int seedValue) {
                                  & SG_yHatOut_,
                                  & yHatOutPtr,
                                  & SG_lambdaMinIndx_,
-                                 & SG_lambda1SEIndx_,
+                                 & SG_lambda1SEIndxMin_,
+                                 & SG_lambda1SEIndxMax_,
                                  & SG_lambdaMeanErr_,
                                  & SG_lambdaCVSD_);
     SG_lambdaCount_[1] = cdlResult -> lambdaCnt;
@@ -322,7 +323,8 @@ void cdlMain(char mode, int seedValue) {
         }
       }
       SG_lambdaMinIndx_[1] = cdlResult -> lambdaTargetIndx;
-      SG_lambda1SEIndx_[1] = cdlResult -> lambda1SEIndx;
+      SG_lambda1SEIndxMin_[1] = cdlResult -> lambda1SEIndxMin;
+      SG_lambda1SEIndxMax_[1] = cdlResult -> lambda1SEIndxMax;
       if (SG_nfolds > 1) {
         if (cdlResult -> valid) {
           for (uint i = 1; i <= cdlResult -> lambdaCnt; i++) {

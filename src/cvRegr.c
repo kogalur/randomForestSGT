@@ -37,8 +37,7 @@ CDLInfo *crossValidationRegr(uint     threadID,
                              double **observationIn) {
   CDLInfo  *cdrMaster;
   double resultMin;
-  double sdErrorAvg;
-  uint   lambdaMin;
+  uint   lambdaMinIndx;
   uint *nIndx;
   uint nfoldsValidCnt;
   if (nIndxIn == NULL) {
@@ -171,37 +170,47 @@ CDLInfo *crossValidationRegr(uint     threadID,
           }
         }
         if (nfoldsValidCnt > 0) {
+          sdError[j] = sdError[j] / nfoldsValidCnt;
           sdError[j] = sqrt(sdError[j] / nfoldsValidCnt);
           (cdrMaster -> lambdaCVSD)[j] = sdError[j];
         }
       }
-      sdErrorAvg = 0.0;
-      for (j = 1; j <= lambdaCntMaster; j++) {
-        sdErrorAvg += sdError[j];
-      }
-      if (nfoldsValidCnt > 0) {    
-        sdErrorAvg = sdErrorAvg / (lambdaCntMaster * sqrt(nfoldsValidCnt));
-      }
       resultMin = DBL_MAX;
-      lambdaMin = 0.0;
+      lambdaMinIndx = 0;
       for (j = 1; j <= lambdaCntMaster; j++) {
         if (resultMin > meanError[j]) {
           resultMin = meanError[j];
-          lambdaMin = j;
+          lambdaMinIndx = j;
         }
       }
       for (j = 1; j <= lambdaCntMaster; j++) {
-        if (meanError[j] <= meanError[lambdaMin] + sdErrorAvg) {
-          cdrMaster -> lambda1SEIndx = j;
+        if (meanError[j] <= meanError[lambdaMinIndx] + sdError[lambdaMinIndx]) {
+          cdrMaster -> lambda1SEIndxMin = j;
         }
       }
-      cdrMaster -> lambdaTargetIndx = lambdaMin;
+      for (j = 1; j <= lambdaCntMaster; j++) {
+        if (meanError[j] <= meanError[lambdaMinIndx] + sdError[lambdaMinIndx]) {
+          cdrMaster -> lambda1SEIndxMax = j;
+          j = lambdaCntMaster;
+        }
+      }
+      cdrMaster -> lambdaTargetIndx = lambdaMinIndx;
       cdrMaster -> valid = FALSE;
       l = 0;
       while ((cdrMaster -> valid == FALSE) && (l < pSize)) {
         l ++;
-        if (fabs(cdrMaster -> beta[lambdaMin][l + 1]) > EPSILON) {
+        if (fabs(cdrMaster -> beta[lambdaMinIndx][l + 1]) > EPSILON) {
           cdrMaster -> valid = TRUE;
+        }
+      }
+      if (cdrMaster -> valid == FALSE) {
+        l = 0;
+        while ((cdrMaster -> valid == FALSE) && (l < pSize)) {
+          l ++;
+          if (fabs(cdrMaster -> beta[cdrMaster -> lambda1SEIndxMin][l + 1]) > EPSILON) {
+            cdrMaster -> valid = TRUE;
+            cdrMaster -> lambdaTargetIndx = cdrMaster -> lambda1SEIndxMin;
+          }
         }
       }
     }  

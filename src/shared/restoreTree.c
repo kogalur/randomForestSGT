@@ -15,7 +15,6 @@
 #include "nodeBaseOps.h"
 #include "termBaseOps.h"
 #include "leafLink.h"
-#include "assignTermNodeInfo.h"
 void restoreTree(char mode, uint treeID, NodeBase *parent) {
   ulong *offset;
   SplitInfo *info;
@@ -79,10 +78,10 @@ void restoreTree(char mode, uint treeID, NodeBase *parent) {
                        RF_masterTimeSize,
                        RF_sortedTimeInterestSize,
                        RF_rNonFactorCount,
+                       RF_rNonFactorIndex,
                        RF_rFactorCount,
-                       RF_rFactorSize,
                        RF_rFactorIndex,
-                       RF_rNonFactorIndex);
+                       RF_rFactorSize);
       parent -> mate = RF_leafLinkedObjTail[treeID] -> termPtr;
       (RF_leafLinkedObjTail[treeID] -> termPtr) -> mate = parent;
       RF_leafLinkedObjTail[treeID] -> nodeID = (RF_leafLinkedObjTail[treeID] -> termPtr) -> nodeID = parent -> nodeID;

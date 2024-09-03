@@ -21,38 +21,60 @@
 #include "terminal.h"
 #include "termOps.h"
 #include "shared/nrutil.h"
+void calculateAllTerminalNodeOutcomesSGT(char mode,
+                                         uint treeID,
+                                         TerminalBase  *term) {
+  Terminal         *termSuper;
+  NodeBase         *termMate;
+  uint  allMembrSize;
+  uint *allMembrIndx;
+  uint *oobMembrIndx;
+  uint *repMembrIndx;
+  uint *ibgMembrIndx;
+  uint  i;
+  termSuper = (Terminal *) term;
+  termMate  = term -> mate;
+  term -> membrCount = termMate -> repMembrSize;
+  termSuper -> repMembrCount = termMate -> repMembrSize;
+  allMembrSize = termMate -> allMembrSize;
+  allMembrIndx = termMate -> allMembrIndx;
+  termSuper -> allMembrSize = allMembrSize;
+  termSuper -> oobMembrCount = 0;
+  termSuper -> ibgMembrCount = 0;
+  termSuper -> oobMembrIndx = uivector(1, allMembrSize);
+  termSuper -> repMembrIndx = uivector(1, allMembrSize);
+  termSuper -> ibgMembrIndx = uivector(1, allMembrSize);
+  oobMembrIndx = termSuper -> oobMembrIndx;
+  repMembrIndx = termSuper -> repMembrIndx;
+  ibgMembrIndx = termSuper -> ibgMembrIndx;
+  for (i = 1; i <= allMembrSize; i++) {
+    if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
+      oobMembrIndx[++ (termSuper -> oobMembrCount)] = allMembrIndx[i];
+    }
+    else {
+      ibgMembrIndx[++ (termSuper -> ibgMembrCount)] = allMembrIndx[i];
+    }
+  }
+  for (i = 1; i <= termSuper -> repMembrCount; i++) {
+    repMembrIndx[i] = termMate -> repMembrIndx[i];
+  }
+  calculateMeanResponseCDL(treeID, termSuper);
+}
 void calculateMeanResponseCDL(uint treeID, Terminal *term) {
   TerminalBase *termBase;
   NodeBase *parentBase;
   Node *parent;
   uint  allMembrSize;
   uint *allMembrIndx;
-  uint *oobMembrIndx;
-  uint *ibgMembrIndx;
   double *yArray;
   double *yHatAbsolute;
   uint i;
   termBase   = (TerminalBase *) term;
   parentBase = termBase -> mate;
   parent     = (Node *) parentBase;
-  term -> ibgMembrCount = parentBase -> repMembrSize;
+  term -> mean = parent -> mean;
   allMembrSize = parentBase -> allMembrSize;
   allMembrIndx = parentBase -> allMembrIndx;
-  term -> allMembrSize = allMembrSize;
-  term -> oobMembrCount = 0;
-  term -> oobMembrIndx = uivector(1, allMembrSize);
-  term -> ibgMembrIndx = uivector(1, allMembrSize);
-  oobMembrIndx = term -> oobMembrIndx;
-  ibgMembrIndx = term -> ibgMembrIndx;
-  for (i = 1; i <= allMembrSize; i++) {
-    if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
-      oobMembrIndx[++ (term -> oobMembrCount)] = allMembrIndx[i];
-    }
-  }
-  for (i = 1; i <= parentBase -> repMembrSize; i++) {
-    ibgMembrIndx[i] = parentBase -> repMembrIndx[i];
-  }
-  term -> mean = parent -> mean;
   if (SG_optLocal & SG_OPT_SWTCH_SIX) {
     if (!RF_nativeIsNaN(parent -> eRisk) && !RF_nativeIsNaN(parent -> eRiskCart)) {
       if (parent -> eRiskCart <= parent -> eRisk) {

@@ -292,7 +292,7 @@ char getBestSplit(uint treeID, LatOptTreeObj *lotObj, GreedyObj *greedyMembr) {
       }
     }
   }  
-  return result;
+  return (result) && (resultLasso || resultCart);
 }
 char virtuallySplitNodeGreedyLasso(uint       treeID,
                                   GreedyObj *greedyMembr,

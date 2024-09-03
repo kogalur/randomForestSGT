@@ -136,8 +136,6 @@ char sgtMainRT(char mode, int seedValue) {
                                            RF_ptnCount,
                                            RF_getTree,
                                            RF_observationSize,
-                                           RF_subjCount,
-                                           RF_subjSlotCount,
                                            &RF_nodeMembership,
                                            &RF_tTermMembership,
                                            &RF_pNodeMembership,
@@ -177,7 +175,7 @@ char sgtMainRT(char mode, int seedValue) {
                                                RF_timeIndex,
                                                RF_timeInterestSize,
                                                RF_subjIn,
-                                               RF_subjSize,
+                                               &RF_subjSize,
                                                &RF_masterTime,
                                                &RF_masterTimeIndexIn,
                                                &RF_startMasterTimeIndexIn,
@@ -189,6 +187,7 @@ char sgtMainRT(char mode, int seedValue) {
                                                &RF_subjSlotCount,
                                                &RF_subjList,
                                                &RF_caseMap,
+                                               &RF_subjMap,
                                                &RF_subjCount);
         if (result) {
           stackFactorArrays(mode,
@@ -411,13 +410,11 @@ char sgtMainRT(char mode, int seedValue) {
           free_new_vvector(SG_yHatAbsolute, 1, RF_ntree, NRUTIL_DPTR);
           for (bb = 1; bb <= RF_getTreeCount; bb++) {
             unstackMembershipVectors(SG_augmObjCommon -> nSize,
-                                     RF_identityMembershipIndexSize,
                                      RF_bootMembershipFlag[bb],
                                      RF_oobMembershipFlag[bb],
                                      RF_bootMembershipCount[bb],
                                      RF_ibgMembershipIndex[bb],
-                                     RF_oobMembershipIndex[bb],
-                                     RF_bootMembershipIndex[bb]);
+                                     RF_oobMembershipIndex[bb]);
             freeTree(bb, RF_root[bb]);
           }
           unstackForestObjectsAuxOnlySGT();
@@ -516,6 +513,7 @@ char sgtMainRT(char mode, int seedValue) {
                                       RF_subjSlotCount,
                                       RF_subjList,
                                       RF_caseMap,
+                                      RF_subjMap,
                                       RF_subjCount);
         }
       }

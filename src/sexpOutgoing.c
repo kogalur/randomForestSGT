@@ -11,17 +11,18 @@
     
 
 #include "sexpOutgoing.h"
-char  *SG_sexpStringOutgoingCDL[10] = {
+char  *SG_sexpStringOutgoingCDL[11] = {
   "cTimeInternal", 
   "beta",          
   "lambdaCount",   
   "lambda",        
   "convgCount",    
   "yHat",          
-  "lambdaMinIndx", 
-  "lambda1SEIndx", 
-  "lambdaMeanErr", 
-  "lambdaCVSD"     
+  "lambdaMinIndx",    
+  "lambda1SEIndxMin", 
+  "lambda1SEIndxMax", 
+  "lambdaMeanErr",    
+  "lambdaCVSD"        
 };
 char  *SG_sexpStringOutgoing[33] = {
   "cTimeInternal",  

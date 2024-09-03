@@ -90,11 +90,6 @@ char processDefaultPredict(void) {
     }
     break;
   }
-  RF_subjSize             = 0;
-  RF_subjWeight           = NULL;
-  RF_subjIn               = NULL;
-  RF_eventTypeSize        = 0;
-  RF_eventType            = NULL;
   RF_xWeight = RF_yWeight = RF_xWeightStat = NULL;  
   return mode;
 }

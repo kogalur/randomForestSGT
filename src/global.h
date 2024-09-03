@@ -15,9 +15,10 @@
 #define SG_CONVG_CT    4  
 #define SG_YHAT        5  
 #define SG_LAMBDA_MIN  6  
-#define SG_LAMBDA_1SE  7  
-#define SG_LAMBDA_ERR  8  
-#define SG_LAMBDA_CVSD 9  
+#define SG_LAMBDA_1SE_MIN  7  
+#define SG_LAMBDA_1SE_MAX  8  
+#define SG_LAMBDA_ERR      9  
+#define SG_LAMBDA_CVSD    10  
 #define SG_MEMB_ID        1  
 #define SG_BOOT_CT        2  
 #define SG_ACLS_ID        3  

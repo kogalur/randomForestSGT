@@ -3,6 +3,8 @@
 \alias{filter.rfsgt}
 \alias{filter.custom.rfsgt}
 \alias{get.beta}
+\alias{tune.hcut}
+\alias{use.tune.hcut}
 \alias{vimp.rfsgt}
 \alias{make.baselearner}
 \title{Random Forest Super Greedy Trees}
@@ -17,8 +19,9 @@ rfsgt(formula,
       hcut = 1,
       treesize = NULL,
       nodesize = NULL,
-      tune = FALSE,
+      tune.treesize = FALSE,
       filter = (hcut > 1),
+      keep.only = NULL,
       fast = TRUE,
       pure.lasso = FALSE,
       eps = .005,
@@ -47,21 +50,25 @@ rfsgt(formula,
   \item{treesize}{Function specifying size of tree (number of terminal
     nodes) where first input is \code{n} sample size and second input is
     \code{hcut}.  Can also be supplied as an integer value and defaults
-    to an internal function if unspecified.  If \code{tune}=TRUE, this
-    is the maximum number of allowable splits.  If \code{tune}=FALSE,
-    this is the target number of tree splits.}
+    to an internal function if unspecified.  If
+    \code{tune.treesize}=TRUE, this is the maximum number of allowable
+    splits.  If \code{tune.treesize}=FALSE, this is the target number of
+    tree splits.}
 
   \item{nodesize}{Minumum size of terminal node.  Set internally if
     not specified.}
 
-  \item{tune}{Adaptively determine the optimal tree size using
+  \item{tune.treesize}{Adaptively determine the optimal tree size using
     out-of-bag empirical risk?}
     
-  \item{filter}{Logical value specifying whether filtering should be
-    applied.  Can also be a character vector of feature names specifying
-    which variables to use.  This latter approach is useful in
-    high-dimensional problems when \code{hcut} is larger than 1. See
-    examples below.}
+  \item{filter}{Logical value specifying whether dimension reduction
+    (filtering) of features should be performed.Can also be specified
+    using the helper function \code{tune.hcut} which performs dimension
+    reduction prior to fitting.  See examples below.}
+
+  \item{keep.only}{Character vector specifying the features of interest.
+  The data is pre-filtered to keep only these requested variables.
+  Ignored if filter is specified using \code{tune.hcut}.}
 
   \item{fast}{Use fast filtering?}
     
@@ -182,7 +189,9 @@ rfsgt(formula,
 \donttest{
   
 ## ------------------------------------------------------------
+##
 ##  boston housing
+##
 ## ------------------------------------------------------------
 
 ## load the data
@@ -202,7 +211,9 @@ print(rfsgt(medv~., BostonHousing, hcut=0, nodesize=1))
 print(rfsgt(medv~., BostonHousing, nodesize=1))
 
 ## ------------------------------------------------------------
+##
 ## boston housing with factors
+##
 ## ------------------------------------------------------------
      
 ## load the data
@@ -224,7 +235,9 @@ print(rfsgt(medv~., Boston, hcut=3))
 
 
 ## ------------------------------------------------------------
+##
 ##  ozone
+##
 ## ------------------------------------------------------------
 
 ## load the data
@@ -237,12 +250,14 @@ print(rfsgt(V4~., na.omit(Ozone), hcut=3))
 
 
 ## ------------------------------------------------------------
-##  non-linear boundary illustrates hcut
+##
+##  non-linear boundary illustrates hcut using single tree
+##
 ## ------------------------------------------------------------
 
 ## simulate non-linear boundary
 n <- 500
-p <- 10
+p <- 5
 signal <- 10
 treesize <- 10
 ngrid <- 200
@@ -268,7 +283,7 @@ nl2d.tst <- data.frame(y = fx.tst, x.tst)
 rO <- lapply(0:4, function(hcut) {
   cat("hcut", hcut, "\n")
   rfsgt(y~., nl2d, ntree=1, hcut=hcut, treesize=treesize, bootstrap="none",
-         tune=TRUE, nodesize=1, strikeout=10000, filter=FALSE)
+         tune.treesize=TRUE, nodesize=1, strikeout=10000, filter=FALSE)
 })
 
 ## nice little wrapper for plotting results
@@ -314,8 +329,10 @@ if (library("interp", logical.return = TRUE)) {
 }
 
 ## ------------------------------------------------------------
+##
 ##  friedman illustration of OOB empirical risk
-##  note: tune=TRUE is required to obtain empirical risk
+##  (note: tune.treesize=TRUE required to obtain empirical risk)
+##
 ## ------------------------------------------------------------
 
 ## simulate friedman
@@ -323,8 +340,8 @@ n <- 500
 dta <- data.frame(mlbench:::mlbench.friedman1(n, sd=0))
 
 ## rf versus rfsgt
-o1 <- rfsgt(y~., dta, hcut=0, tune=TRUE, block.size=1)
-o2 <- rfsgt(y~., dta, hcut=3, tune=TRUE, block.size=1)
+o1 <- rfsgt(y~., dta, hcut=0, tune.treesize=TRUE, block.size=1)
+o2 <- rfsgt(y~., dta, hcut=3, tune.treesize=TRUE, block.size=1)
 
 ## compute running average of OOB empirical risk
 runavg <- function(x, lag = 8) {
@@ -365,7 +382,9 @@ plot(1:o2$ntree, o2$err.rate, type="s", xlab="Trees", ylab="SGF OOB error")
 
 
 ## ------------------------------------------------------------
+##
 ## synthetic regression examples with different hcut
+##
 ## ------------------------------------------------------------
 
 ## simulation functions
@@ -401,7 +420,9 @@ names(results) <- names(sim)
 print(results)
 
 ## ------------------------------------------------------------
+##
 ## iowa housing data 
+##
 ## ------------------------------------------------------------
 
 data(housing, package = "randomForestSRC")
@@ -417,10 +438,9 @@ d <- data.frame(data.matrix(d))
 print(rfsgt(SalePrice~.,d))
 
 ## ------------------------------------------------------------
-## high-dimensional linear model
 ##
-## filter.rfsgt used by the filter=TRUE option can be used as
-## standalone method for selecting variables
+## high-dimensional model with variable selection
+##
 ## ------------------------------------------------------------
 
 ## simulate big p small n data
@@ -429,13 +449,17 @@ p <- 500
 d <- data.frame(y = rnorm(n), x = matrix(rnorm(n * p), n))
 
 ## we have a big p small n pure noise setting: let's see how well we do
+cat("variables selected by vimp.rfsgt:\n")
+print(sort(vimp.rfsgt(y~.,d)))
+
+## internal filtering function can also be used
 cat("variables selected by filter.rfsgt:\n")
 print(filter.rfsgt(y~.,d, method="conserve"))
 
 ## ------------------------------------------------------------
-## high-dimensional non-linear model (friedman 1)
 ##
-## reduce dimension using filter.rfsgt prior to running the tree
+## pre-filtering using keep.only
+##
 ## ------------------------------------------------------------
 
 ## simulate the data
@@ -444,17 +468,38 @@ p <- 50
 noise <- matrix(runif(n * p), ncol=p)
 dta <- data.frame(mlbench:::mlbench.friedman1(n, sd=0), noise=noise)
 
-## reduce dimension
-nms <- filter.rfsgt(y~., dta)
+## filter the variables
+f <- filter.rfsgt(y~., dta)
 
-## run rfsgt with different hcut
-print(rfsgt(y~.,dta, filter=nms, hcut=0))
-print(rfsgt(y~.,dta, filter=nms, hcut=1))
-print(rfsgt(y~.,dta, filter=nms, hcut=2))
-print(rfsgt(y~.,dta, filter=nms, hcut=3))
-print(rfsgt(y~.,dta, filter=nms, hcut=4))
-print(rfsgt(y~.,dta, filter=nms, hcut=5))
-print(rfsgt(y~.,dta, filter=nms, hcut=6))
+## use keep.only to pre-filter the features
+print(rfsgt(y~.,dta, keep.only=f, hcut=1))
+print(rfsgt(y~.,dta, keep.only=f, hcut=2))
+print(rfsgt(y~.,dta, keep.only=f, hcut=3))
+
+
+## ------------------------------------------------------------
+##
+## tuning hcut and pre-filtering using tune.hcut
+##
+## ------------------------------------------------------------
+
+## simulate the data
+n <- 100
+p <- 50
+noise <- matrix(runif(n * p), ncol=p)
+dta <- data.frame(mlbench:::mlbench.friedman1(n, sd=0), noise=noise)
+
+## tune hcut
+f <- tune.hcut(y~., dta, hcut=3)
+
+## use the optimized hcut
+print(rfsgt(y~.,dta, filter=f))
+
+## over-ride the tuned hcut value
+print(rfsgt(y~.,dta, filter=use.tune.hcut(f, hcut=1)))
+print(rfsgt(y~.,dta, filter=use.tune.hcut(f, hcut=2)))
+print(rfsgt(y~.,dta, filter=use.tune.hcut(f, hcut=3)))
+
 
 }
 }

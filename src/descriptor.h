@@ -1,5 +1,6 @@
 #ifndef RF_DESCRIPTOR_H
 #define RF_DESCRIPTOR_H
+#include <stdint.h>
 #define SG_TCP_BUFFER_SIZE 0xFFFF
 #define SG_DESC_CLOSED       0x20
 #define SG_DESC_OPENED       0x21

@@ -1,10 +1,26 @@
-tune.rfsgt <- function(f, data, hcut=3,
-                       ntree=1, hcut.threshold=3, nfolds=10,
+use.tune.hcut <- function(f, hcut = NULL) {
+  if (!inherits(f, "tune.hcut")) {
+    stop("this function only works on 'tune.hcut' objects")
+  }
+  if (is.null(hcut)) {
+    return(f)
+  }
+  hcutSeq <- attr(f, "hcutSeq")
+  hcut <- max(min(hcut, max(hcutSeq)), min(hcutSeq))
+  hcut.idx <- which(hcut == hcutSeq)
+  fnew <- attr(f, "all")[[hcut.idx]]
+  attributes(fnew) <- attributes(f)
+  attr(fnew, "hcut") <- hcutSeq[hcut.idx]  
+  fnew
+}
+tune.hcut <- function(f, data, hcut=3,
+                       ntree=1, treesize=3,
+                       hcut.threshold=3, nfolds=10,
                        method=c("min", "conserve")[2],
                        verbose=FALSE, p.filter=40) {
   ## hcut sequence to be evaluated
-  max.cut <- hcut
-  hcutSeq <- 0:max.cut
+  hcut.max <- hcut
+  hcutSeq <- 0:hcut.max
   ## stump tree for extraction
   o.stump <- get.stump(f, data)
   ## hot-encode the data
@@ -17,14 +33,14 @@ tune.rfsgt <- function(f, data, hcut=3,
   ## fast filtering
   if (length(colnames(x)) > p.filter) {
     if (verbose) cat("preliminary dimension reduction used for large p\n")
-    filter1 <- c(yvar.names, filter.rfsgt(f, data, hcut=1))
+    filterS <- c(yvar.names, filter.rfsgt(f, data, hcut=1, treesize=treesize))
   }
   else {
-    filter1 <- c(yvar.names, colnames(x))
+    filterS <- c(yvar.names, colnames(x))
   }
-  if (max.cut >= hcut.threshold) {
-    filterX <- unique(c(filter1,
-      filter.rfsgt(f, data[, filter1, drop=FALSE], hcut=hcut.threshold, original=TRUE)))
+  if (hcut.max >= hcut.threshold) {
+    filterX <- unique(c(filterS,
+      filter.rfsgt(f, data[, filterS, drop=FALSE], hcut=hcut.threshold, treesize=treesize, original=TRUE)))
   }
   ## dimension reduction for each hcut
   dots <- list()
@@ -34,7 +50,7 @@ tune.rfsgt <- function(f, data, hcut=3,
   xd <- lapply(hcutSeq, function(hcut) {
     if (verbose) cat("dimension reduction, hcut:", hcut, "\n")
     o <- do.call("rfsgt", c(list(f,
-            if (hcut < hcut.threshold) data[, filter1, drop=FALSE] else data[, filterX, drop=FALSE],
+            if (hcut < hcut.threshold) data[, filterS, drop=FALSE] else data[, filterX, drop=FALSE],
             hcut=hcut), dots))
     if (is.null(o$xvar.augment.names)) {
       o$xvar
@@ -86,14 +102,15 @@ tune.rfsgt <- function(f, data, hcut=3,
   ## return the goodies
   filter <- colnames(xd[[idx]])
   attr(filter, "all") <- lapply(xd, function(x) {colnames(x)})
-  attr(filter, "formula") <- make.filter.baselearner.workhorse(filter)
+  attr(filter, "formula") <- filter.baselearner.workhorse(filter)
   attr(filter, "formula.all") <- lapply(xd, function(x) {
-    make.filter.baselearner.workhorse(colnames(x))})
+    filter.baselearner.workhorse(colnames(x))})
   attr(filter, "cv") <- cv
   attr(filter, "hcut") <- cv$hcut[idx]
   attr(filter, "hcut.min") <- cv$hcut[idx.min]
   attr(filter, "hcut.1se") <- cv$hcut[idx.conserve]
-  class(filter) <- "tune.rfsgt"
+  attr(filter, "hcutSeq") <- cv$hcut
+  class(filter) <- "tune.hcut"
   filter
 }
 ##########################################################################################
@@ -106,7 +123,7 @@ cv.folds <- function (n, folds = 10) {
   split(sample(1:n), rep(1:folds, length = n))
 }
 ## baselearner formula constructed from filtered base learner variables
-make.filter.baselearner.workhorse <- function (filter, sqchar = "_SQ2_", ichar="_I_") {
+filter.baselearner.workhorse <- function (filter, sqchar = "_SQ2_", ichar="_I_") {
   ## convert encoded base-learner names into R formula for model.matrix
   nmX <- lapply(filter, function(ll) {
     s <- gsub(ichar, ":", ll)
@@ -128,13 +145,14 @@ make.filter.baselearner.workhorse <- function (filter, sqchar = "_SQ2_", ichar="
   paste("~-1+", paste(nmX, collapse="+"))
 }
 ## baselearner X: fast construction using only filtered base learner variables
-make.filter.baselearner <- function (x, filter, sqchar = "_SQ2_", ichar="_I_") {
-  ## confirm this is a tune.rfsgt object
-  if (!inherits(filter, "tune.rfsgt")) {
-    stop("this function only works for objects of class 'tune.rfsgt'")
-  }
+filter.baselearner <- function (x, filter, sqchar = "_SQ2_", ichar="_I_") {
+  ## remove coherence check ---> this is a useful function for other applications
+  ## confirm this is a tune.hcut object
+  #if (!inherits(filter, "tune.hcut")) {
+  #  stop("this function only works for objects of class 'tune.hcut'")
+  #}
   ## mod data set using model.matrix
-  f <- make.filter.baselearner.workhorse(filter, sqchar=sqchar, ichar=ichar)
+  f <- filter.baselearner.workhorse(filter, sqchar=sqchar, ichar=ichar)
   xmod <- data.frame(model.matrix(as.formula(f), x))
   colnames(xmod) <- filter
   ## filtered effects

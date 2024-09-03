@@ -39,35 +39,12 @@ void freeTerminalDerived(void *parent) {
   deinitTerminalBase((TerminalBase*) parent);
   if (((Terminal *) parent) -> allMembrSize > 0) {
     free_uivector(((Terminal *) parent) -> oobMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
+    free_uivector(((Terminal *) parent) -> repMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
     free_uivector(((Terminal *) parent) -> ibgMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
   }
   free_gblock(parent, (size_t) sizeof(Terminal));
 }
-void updateTerminalNodeOutcomesCDL(uint treeID, Terminal *parent) {
-if ((RF_opt & OPT_PERF) ||
-    (RF_opt & OPT_OENS) ||
-    (RF_opt & OPT_IENS) ||
-    (RF_opt & OPT_FENS)) {
-  if (RF_rFactorCount > 0) {
-  }
-  if (RF_rNonFactorCount > 0) {
-    calculateMeanResponseCDL(treeID, parent);
-  }
- }
-}
 void restoreTerminalNodeOutcomesCDL(uint treeID, Terminal *parent) {
-if ((RF_opt & OPT_PERF) ||
-    (RF_opt & OPT_OENS) ||
-    (RF_opt & OPT_IENS) ||
-    (RF_opt & OPT_FENS)) {
-  if (RF_rFactorCount > 0) {
-  }
-  if (RF_rNonFactorCount > 0) {
-    restoreMeanResponseCDL(treeID, parent);
-  }
- }
-}
-void getTestTerminalNodeOutcomesCDL(uint treeID, Terminal *parent) {
 if ((RF_opt & OPT_PERF) ||
     (RF_opt & OPT_OENS) ||
     (RF_opt & OPT_IENS) ||

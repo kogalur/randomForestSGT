@@ -1,6 +1,5 @@
 \name{predict.rfsgt}
 \alias{predict.rfsgt}
-\alias{tune.rfsgt}
 \title{Prediction on Test Data for Super Greedy Forests}
 
 \description{
@@ -130,20 +129,29 @@ cat("coherence for inbag data:", sum(pred$pred.inb-pred$pred.test,na.rm=TRUE)==0
 cat("  coherence for oob data:", sum(pred$pred.oob-pred$pred.test,na.rm=TRUE)==0, "\n")
 
 
+## canonical example of train/test with prediction
+trn <- sample(1:nrow(Boston), nrow(Boston)/2, replace=FALSE)
+o.trn <- rfsgt(medv~.,Boston[trn,],hcut=2)
+predict(o.trn,Boston[-trn,])
+
+
 ## ------------------------------------------------------------
-##
-## use 10-fold validation to tune hcut
-##
+## prediction using tuning hcut and pre-filtering with tune.hcut 
 ## ------------------------------------------------------------
 
 ## fit the forest to the tuned hcut
 dta <- data.frame(mlbench:::mlbench.friedman3(500))
-f <- tune.rfsgt(y~., dta, hcut=5, verbose=TRUE)
+f <- tune.hcut(y~., dta, hcut=5, verbose=TRUE)
 o <- rfsgt(y~., dta, filter=f)
 print(o)
 
 ## test the tuned forest on new data
 print(predict(o, data.frame(mlbench:::mlbench.friedman3(25000))))
+
+## over-ride the optimized hcut
+o2 <- rfsgt(y~., dta, filter=use.tune.hcut(f, hcut=2))
+print(o2)
+print(predict(o2, data.frame(mlbench:::mlbench.friedman3(25000))))
 
 
 }

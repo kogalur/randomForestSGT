@@ -28,11 +28,10 @@
 #include "shared/terminalBase.h"
 #include "shared/nrutil.h"
 #include "shared/restoreTree.h"
-#include "shared/assignTermNodeInfo.h"
 #include "shared/bootstrap.h"
 #include "shared/nodeBaseOps.h"
 #include "shared/termBaseOps.h"
-#include "shared/polarity.h"
+#include "shared/polarityNew.h"
 #include "shared/error.h"
 #include <unistd.h>
 void acquireTreeRT(char mode, uint treeID) {
@@ -48,13 +47,11 @@ void acquireTreeRT(char mode, uint treeID) {
   nSize = SG_augmObjCommon -> nSize;
   xSize = SG_augmObjCommon -> pSize;
   stackMembershipVectors(nSize,
-                         RF_identityMembershipIndexSize,
                          &RF_bootMembershipFlag[treeID],
                          &RF_oobMembershipFlag[treeID],
                          &RF_bootMembershipCount[treeID],
                          &RF_ibgMembershipIndex[treeID],
-                         &RF_oobMembershipIndex[treeID],
-                         &RF_bootMembershipIndex[treeID]);
+                         &RF_oobMembershipIndex[treeID]);
   RF_nodeMembership[treeID] = (NodeBase **) new_vvector(1, nSize, NRUTIL_NPTR);
   RF_tTermMembership[treeID] = (TerminalBase **) new_vvector(1, nSize, NRUTIL_TPTR);
   RF_leafLinkedObjHead[treeID] = RF_leafLinkedObjTail[treeID] = makeLeafLinkedObj();
@@ -97,7 +94,6 @@ void acquireTreeRT(char mode, uint treeID) {
                           RF_bootMembershipFlag,
                           RF_oobMembershipFlag,
                           RF_bootMembershipCount,
-                          RF_bootMembershipIndex,
                           RF_oobSize,
                           RF_ibgSize,
                           RF_ibgMembershipIndex,

@@ -128,13 +128,15 @@ cdlasso.rfsgt <- function(formula,
             ## yet support subsetting on the R-side.
             yHat  <- matrix(nativeOutput$yHat, c(lambdaCount, n), byrow=TRUE)
             lambda.min.indx  <- nativeOutput$lambdaMinIndx
-            lambda.1se.indx  <- nativeOutput$lambda1SEIndx
+            lambda.1se.min.indx  <- nativeOutput$lambda1SEIndxMin
+            lambda.1se.max.indx  <- nativeOutput$lambda1SEIndxMax
             lambda.cvm  <- nativeOutput$lambdaMeanErr
             lambda.cvsd <- nativeOutput$lambdaCVSD
             cdlassoOutput  <- c(cdlassoOutput,
                                 list(yHat = yHat,
                                      lambda.min.indx = lambda.min.indx,
-                                     lambda.1se.indx = lambda.1se.indx,
+                                     lambda.1se.min.indx = lambda.1se.min.indx,
+                                     lambda.1se.max.indx = lambda.1se.max.indx,
                                      lambda.cvm      = lambda.cvm,
                                      lambda.cvsd     = lambda.cvsd))
         }

@@ -555,7 +555,8 @@ CDLInfo *makeCDLInfo(uint p, uint lambdaCnt) {
   obj -> yHatCnt = 0;
   obj -> valid = FALSE;
   obj -> lambdaTargetIndx = 0;
-  obj -> lambda1SEIndx = 0;
+  obj -> lambda1SEIndxMin = 0;
+  obj -> lambda1SEIndxMax = 0;
   obj -> lambdaMeanErr = NULL;
   obj -> lambdaCVSD = NULL;
   return obj;

@@ -34,6 +34,7 @@
 #include "stackOutput.h"
 #include "splitUtil.h"
 #include "processEnsemble.h"
+#include "regressionDerived.h"
 char sgtMain(char mode, int seedValue) {
   uint b, bb;
   uint seedValueLC;
@@ -132,8 +133,6 @@ char sgtMain(char mode, int seedValue) {
                                            RF_ptnCount,
                                            RF_getTree,
                                            RF_observationSize,
-                                           RF_subjCount,
-                                           RF_subjSlotCount,
                                            &RF_nodeMembership,
                                            &RF_tTermMembership,
                                            &RF_pNodeMembership,
@@ -180,26 +179,27 @@ char sgtMain(char mode, int seedValue) {
     break;
   }
       if (result) {
-        stackAndInitializeTimeAndSubjectArrays(mode,
-                                               RF_startTimeIndex,
-                                               RF_observationSize,
-                                               RF_responseIn,
-                                               RF_timeIndex,
-                                               RF_timeInterestSize,
-                                               RF_subjIn,
-                                               RF_subjSize,
-                                               &RF_masterTime,
-                                               &RF_masterTimeIndexIn,
-                                               &RF_startMasterTimeIndexIn,
-                                               &RF_timeInterest,
-                                               &RF_masterTimeSize,
-                                               &RF_sortedTimeInterestSize,
-                                               &RF_masterToInterestTimeMap,
-                                               &RF_subjSlot,
-                                               &RF_subjSlotCount,
-                                               &RF_subjList,
-                                               &RF_caseMap,
-                                               &RF_subjCount);
+        result = stackAndInitializeTimeAndSubjectArrays(mode,
+                                                        RF_startTimeIndex,
+                                                        RF_observationSize,
+                                                        RF_responseIn,
+                                                        RF_timeIndex,
+                                                        RF_timeInterestSize,
+                                                        RF_subjIn,
+                                                        &RF_subjSize,
+                                                        &RF_masterTime,
+                                                        &RF_masterTimeIndexIn,
+                                                        &RF_startMasterTimeIndexIn,
+                                                        &RF_timeInterest,
+                                                        &RF_masterTimeSize,
+                                                        &RF_sortedTimeInterestSize,
+                                                        &RF_masterToInterestTimeMap,
+                                                        &RF_subjSlot,
+                                                        &RF_subjSlotCount,
+                                                        &RF_subjList,
+                                                        &RF_caseMap,
+                                                        &RF_subjMap,
+                                                        &RF_subjCount);
         if (result) {
           stackFactorArrays(mode,
                             RF_rType,
@@ -422,6 +422,7 @@ char sgtMain(char mode, int seedValue) {
           makeTerminal = & makeTerminalDerived;
           freeTerminal = & freeTerminalDerived;
           getVariance = & getVarianceSinglePass;
+          calculateAllTerminalNodeOutcomes = & calculateAllTerminalNodeOutcomesSGT;
           char *perm = cvector(1, RF_xSize);
           for (uint i = 1; i <= RF_xSize; i++) {
             perm[i] = TRUE;
@@ -599,6 +600,7 @@ char sgtMain(char mode, int seedValue) {
                                       RF_subjSlotCount,
                                       RF_subjList,
                                       RF_caseMap,
+                                      RF_subjMap,
                                       RF_subjCount);
         }
       }

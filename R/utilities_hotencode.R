@@ -1,3 +1,26 @@
+## get subset of hotencoded data frame
+get.hotencode.subset <- function(x, filter = NULL) {
+  xvar.names <- attr(x, "hotencode")$xvar.names
+  xnms <- intersect(filter, xvar.names)
+  if (length(xnms) == 0) {
+    return(x)
+  }
+  ## obtain the subset data frame
+  xn <- data.frame(lapply(filter, function(xv) {
+    pt <- grepl(xv, colnames(x))
+    if (sum(pt) > 0) {
+      x[, pt, drop = FALSE]
+    }
+    else {
+      NULL
+    }
+  }))
+  ## last check to make sure xn is coherent
+  xn <- xn[, intersect(colnames(xn), colnames(x)), drop = FALSE]
+  ## embed hotencoding
+  attr(xn, "hotencode") <- attr(x, "hotencode")
+  xn
+}
 ## hot-encoding
 get.hotencode <- function(x, papply = mclapply) {
   anyF <- sapply(x, is.factor) | sapply(x, is.character)
@@ -26,26 +49,23 @@ get.hotencode <- function(x, papply = mclapply) {
         model.matrix(f, xn)
       }
     }))
-    ## store useful information from original data
+    ## store factor information from original data
     xvar.names <- colnames(x)
     xlevels <- lapply(x[, anyF, drop = FALSE], function(x){levels(as.factor(x))})
     ## package up as data frame, store useful attributes
     x <- data.frame(x[, !anyF, drop = FALSE], x.f)
-    attr(x, "hotencode") <- TRUE
-    attr(x, "xvar.names") <- xvar.names
-    attr(x, "levels") <- xlevels
+    attr(x, "hotencode") <- list(hotencode = TRUE, xvar.names = xvar.names, levels = xlevels)
   }
   ## no hotencoding performed
   else {
-    attr(x, "hotencode") <- FALSE
-    attr(x, "xvar.names") <- colnames(x)
+    attr(x, "hotencode") <- list(hotencode = FALSE, xvar.names = colnames(x))
   }
   x
 }
 ## hot-encoding for test data
-get.hotencode.test <- function(x, xtest, papply = mclapply, raw = FALSE) {
+get.hotencode.test <- function(x, xtest, papply = mclapply, return.all = TRUE) {
   ## pull the original variable names (which may not be the same as colnames of x)
-  xvar.names <- attr(x, "xvar.names")
+  xvar.names <- attr(x, "hotencode")$xvar.names
   ## confirm test data coherence
   if (length(intersect(xvar.names, names(xtest))) != length(xvar.names)) {
     stop("variable names from test data do not match training data\n")
@@ -53,11 +73,10 @@ get.hotencode.test <- function(x, xtest, papply = mclapply, raw = FALSE) {
   ## restrict columns of test data to training data
   xtest <- xtest[, intersect(xvar.names, names(xtest)), drop = FALSE]
   ## nothing to do if hotencoding was not used
-  if (attr(x, "hotencode") == FALSE) {
-    attr(xtest, "hotencode") <- FALSE
-    attr(xtest, "xvar.names") <- colnames(xtest)
-    ## return as is
-    if (raw) {
+  if (attr(x, "hotencode")$hotencode == FALSE) {
+    attr(xtest, "hotencode") <- list(hotencode = FALSE, xvar.names = colnames(xtest))
+    ## return all variables (as.is)
+    if (return.all) {
       return(xtest)
     }
     ## removes unncessary extra columns
@@ -66,7 +85,7 @@ get.hotencode.test <- function(x, xtest, papply = mclapply, raw = FALSE) {
     }
   }
   ## pull the training levels
-  xlevels <- attr(x, "levels")
+  xlevels <- attr(x, "hotencode")$levels
   ## there are factors present in the test data: encode them
   x.f <- do.call(cbind, papply(names(xlevels), function(nn) {
     ## pull the test feature: convert to character 
@@ -87,7 +106,6 @@ get.hotencode.test <- function(x, xtest, papply = mclapply, raw = FALSE) {
     }
     ## two-level factors are converted to binary
     else if (length(trn.labels) == 2) {
-      #xn <- data.frame(as.numeric(factor(xn, levels = levels(xn))) - 1)
       xn <- data.frame(as.numeric(xn) - 1)
       colnames(xn) <- nn
       xn
@@ -101,11 +119,9 @@ get.hotencode.test <- function(x, xtest, papply = mclapply, raw = FALSE) {
   }))
   ## package up as data frame, store useful attributes
   xtest <- data.frame(xtest[, setdiff(xvar.names, names(xlevels)), drop = FALSE], x.f)
-  attr(xtest, "hotencode") <- TRUE
-  attr(xtest, "levels") <- xlevels
-  attr(xtest, "xvar.names") <- xvar.names
-  ## return as is
-  if (raw) {
+  attr(xtest, "hotencode") <- list(hotencode = TRUE, xvar.names = xvar.names, levels = xlevels)
+  ## return all variables (as.is)
+  if (return.all) {
     xtest
   }
   ## removes unncessary extra columns

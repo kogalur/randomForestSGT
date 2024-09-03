@@ -3,9 +3,10 @@ rfsgt.workhorse <- function(formula,
                             ntree = 100,
                             hcut = 1,
                             treesize = NULL,
-                            tune = FALSE,
+                            tune.treesize = FALSE,
                             nodesize = NULL,
                             filter = TRUE,
+                            keep.only = NULL,
                             fast = TRUE,
                             pure.lasso = FALSE,
                             eps = .005,
@@ -45,6 +46,8 @@ rfsgt.workhorse <- function(formula,
   if (length(yvar.names) == 0) {
     stop("something seems wrong: your formula did not define any y-variables")
   }
+  ## save hotencode information of the original variables
+  hotencode <- attr(get.hotencode(data[, xvar.org.names, drop = FALSE]), "hotencode")
   ## get y + immutable yvar factor map + y-outcome type and nlevels
   yvar <- data[, yvar.names]
   yfactor <- extract.factor(data, yvar.names)
@@ -56,46 +59,51 @@ rfsgt.workhorse <- function(formula,
   hcut <- splitinfo$hcut
   nsplit <- splitinfo$nsplit
   nfolds <- splitinfo$nfolds
-  ## user specified filter variable list?
-  keep.filter <- xvar.org.names
-  user.filter.flag <- FALSE
-  if (is.character(filter) && !inherits(filter, "tune.rfsgt")) {
-    user.filter.flag <- TRUE
-    keep.filter <- xvar.org.names[sapply(xvar.org.names, function(xv) {any(grepl(xv, filter))})]    
-    if (length(keep.filter) == 0) {
+  ## flag for building agumented x baselearner
+  baselearner.flag <- TRUE
+  augmentX <- augmentXlist <- hcutCnt <- NULL
+  ## keep only a requested subset of the features? ignored if filter is of type "tune.hcut"
+  xvar.keep <- xvar.org.names
+  if (!is.null(keep.only) && !inherits(filter, "tune.hcut")) {
+    xvar.keep <- intersect(xvar.org.names, keep.only)
+    if (length(xvar.keep) == 0) {
       stop("user specified filtering variables do not match original xvariable names\n")
     }
   }
-  ## hot-encode x 
-  xvar <- get.hotencode(data[, keep.filter, drop = FALSE])
-  ## dimension reduction using tune.rfsgt filtering variables
-  baselearner.flag <- TRUE
-  augmentX <- augmentXlist <- hcutCnt <- NULL
-  if (is.character(filter) && inherits(filter, "tune.rfsgt")) {
-    user.filter.flag <- TRUE
-    baselearner.flag <- FALSE
+  ## hot-encode the data (which can be subsetted)
+  xvar <- get.hotencode(data[, xvar.keep, drop=FALSE])
+  ## dimension reduction using tune.hcut filtering variables
+  ## filtering is switched off and we build the augmented x here
+  if (inherits(filter, "tune.hcut")) {
     hcut <- attr(filter, "hcut")
-    o.base <- make.filter.baselearner(xvar, filter)
-    xvar <- o.base$x[, o.base$xvar.names, drop = FALSE]
+    baselearnerO <- filter.baselearner(xvar, filter)
+    xvar <- baselearnerO$x[, baselearnerO$xvar.names, drop = FALSE]
     hcutCnt <- ncol(xvar)
-    if (length(o.base$xvar.augment.names) > 0) {
-      augmentX <- o.base$x[, o.base$xvar.augment.names, drop = FALSE]
+    if (length(baselearnerO$xvar.augment.names) > 0) {
+      augmentX <- baselearnerO$x[, baselearnerO$xvar.augment.names, drop = FALSE]
       augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
       hcutCnt <- hcutCnt + ncol(augmentX)
     }
+    else {
+      ## no augmented variables were selected: need to re-initalize hcut
+      hcut <- 1
+      augmentX <- augmentXlist <- NULL
+    }
+    filter <- baselearner.flag <- FALSE
   }
-  ## dimension reduction using custom filtering via vimp.rfsgt
-  custom.filter.flag <- FALSE
-  if (!user.filter.flag && filter == TRUE) {
-    custom.filter.flag <- TRUE
+  ## dimension reduction using custom filtering via filter.custom.rfsgt
+  ## does not apply if tune.hcut has been used
+  if (filter) {
     df <- data.frame(yvar, xvar)
     colnames(df) <- c(yvar.names, colnames(xvar))
-    keep.custom.filter <- filter.custom.rfsgt(formula, df, hcut=hcut, method="liberal", fast=fast)
-    if (sum(colnames(xvar) %in% keep.custom.filter) > 0) {
-      xvar <- xvar[, colnames(xvar) %in% keep.custom.filter, drop = FALSE]
+    xvar.keep.custom <- filter.custom.rfsgt(formula, df, hcut=hcut, method="liberal", fast=fast)
+    if (sum(colnames(xvar) %in% xvar.keep.custom) > 0) {
+      xvar <- xvar[, colnames(xvar) %in% xvar.keep.custom, drop = FALSE]
     }
     rm(df)
   }
+  ## attach the hotencode information for later downstream calculations
+  attr(xvar, "hotencode") <- hotencode
   ## final processing of original x
   xvar.names <- colnames(xvar)
   n.xvar <- length(xvar.names)
@@ -106,13 +114,12 @@ rfsgt.workhorse <- function(formula,
   if (is.null(hcutCnt)) {
     hcutCnt <- n.xvar
   }
-  ## augmented x: calls baselearner and removes original variables
-  ## filtering is then applied if user has requested it
+  ## build augmented x - careful if filtering has been applied
   if (hcut > 1 && baselearner.flag) {
     augmentX <- make.baselearner(xvar, hcut)[, -(1:n.xvar), drop = FALSE]
-    if (custom.filter.flag) {
-      if (sum(colnames(augmentX) %in% keep.custom.filter) > 0) {
-        augmentX <- augmentX[, colnames(augmentX) %in% keep.custom.filter, drop = FALSE]
+    if (filter) {
+      if (sum(colnames(augmentX) %in% xvar.keep.custom) > 0) {
+        augmentX <- augmentX[, colnames(augmentX) %in% xvar.keep.custom, drop = FALSE]
         hcutCnt <- hcutCnt + ncol(augmentX)
         augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
       }
@@ -137,7 +144,7 @@ rfsgt.workhorse <- function(formula,
   nodesize <- get.nodesize(family, nodesize)    
   lot <- get.lot(hcut=hcut,
                  treesize=treesize,
-                 tune=tune,
+                 tune=tune.treesize,
                  lag=dots$lag,
                  strikeout=dots$strikeout,
                  max.two=dots$max.two,
@@ -368,7 +375,7 @@ rfsgt.workhorse <- function(formula,
   colnames(nativeArray) <- c("treeID", "nodeID", "nodeSZ", "brnodeID",
                              "betaZ", as.character(1:hcutCnt), "yStar", "yBar", "prnodeID")
   ## save the lot 
-  lot <- c(lot, lasso=lasso, experimental.bits=experimental.bits, tune=tune)
+  lot <- c(lot, lasso=lasso, experimental.bits=experimental.bits, tune=tune.treesize)
   forest.out  <- list(forest = TRUE,
                       ntree = ntree,
                       n = n,
@@ -389,7 +396,7 @@ rfsgt.workhorse <- function(formula,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
                       ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
-                      version = "0.0.1.49")
+                      version = "0.0.1.54")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL

@@ -43,8 +43,8 @@ cdlasso(formula,
     \code{n.xvar}.}
 
   \item{lambda}{Lasso \code{lambda} sequence.  Default is an internally
-          selected sequence based on \code{nlambda} and
-          \code{lambda.min.ratio}.  For experts only.}
+    selected sequence based on \code{nlambda} and
+    \code{lambda.min.ratio}. For experts only.}
 
   \item{threshold}{Convergence threshold for coordinate descent. Each
     inner coordinate-descent loop continues until the maximum change in
@@ -89,10 +89,14 @@ Use coordinate descent to fit lasso to a regression model.
   minimum cross-validation error.  Only applies if \code{nfolds} is
   greater than 1.}
 
-  \item{lambda.1se.indx}{Index for largest value of \code{lambda} such
-    that error is within 1 standard error of the minimum
-    cross-validation error. Only applies if \code{nfolds} is greater
-    than 1.}
+  \item{lambda.1se.min.indx}{Index for minimum \code{lambda} value
+    within 1 standard error of the minimum cross-validation error. This
+    is more liberal.  Only applies if \code{nfolds} is greater than 1.}
+
+  \item{lambda.1se.max.indx}{Index for maximum \code{lambda} value
+    within 1 standard error of the minimum cross-validation error. This
+    is more conservative.  Only applies if \code{nfolds} is greater than
+    1.}
 
 }
 
@@ -130,10 +134,10 @@ o <- cdlasso(medv ~., BostonHousing, nfolds=10)
 
 ## lasso solution
 bhat <- data.frame(bhat.min=o$beta[o$lambda.min.indx,],
-                   bhat.1se=o$beta[o$lambda.1se.indx[1],])
+                   bhat.1se=o$beta[o$lambda.1se.max.indx[1],])
 print(bhat)
 
-## compare with glmnet
+## compare to results from glmnet
 if (library("glmnet", logical.return = TRUE)) {
 
   oo <- cv.glmnet(data.matrix(o$xvar), o$yvar, nfolds=10)

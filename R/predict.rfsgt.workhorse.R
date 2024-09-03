@@ -91,7 +91,7 @@ predict.rfsgt.workhorse <-  function(object,
   }
   else {
     object.version <- as.integer(unlist(strsplit(object$version, "[.]")))
-    installed.version <- as.integer(unlist(strsplit("0.0.1.49", "[.]")))
+    installed.version <- as.integer(unlist(strsplit("0.0.1.54", "[.]")))
     minimum.version <- as.integer(unlist(strsplit("0.0.0.0", "[.]")))
     object.version.adj <- object.version[1] + (object.version[2]/10) + (object.version[3]/100)
     installed.version.adj <- installed.version[1] + (installed.version[2]/10) + (installed.version[3]/100)
@@ -123,8 +123,10 @@ predict.rfsgt.workhorse <-  function(object,
     xvar.newdata <- get.hotencode.test(xvar, newdata)
     ## create test augmented data (if necessary)
     if (hcut>1 && !is.null(xvar.augment.names)) {
-      xvar.augment.newdata <- make.baselearner(xvar.newdata, hcut)[, xvar.augment.names, drop = FALSE]  
+      xvar.augment.newdata <- filter.baselearner(xvar.newdata, xvar.augment.names)$x
     }
+    ## restrict xvar to the training xvar.names
+    xvar.newdata <- xvar.newdata[, intersect(colnames(xvar.newdata), xvar.names), drop=FALSE]
     ## extract test yvar (if present)
     yvar.present <- sum(is.element(yvar.names, names(newdata))) > 0
     if (yvar.present) {
