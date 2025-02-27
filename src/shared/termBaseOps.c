@@ -31,29 +31,30 @@ void preInitTerminalBase(TerminalBase *parent) {
 void initTerminalBase(TerminalBase *parent,
                       uint  eTypeSize,
                       uint  mTimeSize,
+                      uint  aeTimeSize,
                       uint  sTimeSize,
                       uint  rnfCount,
                       uint *rnfIndex,
                       uint  rfCount,
                       uint *rfIndex,
                       uint *rfSize) {
-  if (rnfCount > 0) {
-    parent -> regressionBase = makeRegressionBase(rnfCount, rnfIndex, NULL);
-    parent -> regressionBase -> base = parent;
-  }
-  else if (rfCount > 0) {
-    parent -> classificationBase = makeClassificationBase(rfCount, rfIndex, rfSize);
-    parent -> classificationBase -> base = parent;
-  }
-  else if (eTypeSize > 0) {
+  if (eTypeSize > 0) {
     if (eTypeSize == 1) {
-      parent -> survivalBase = makeSurvivalBase(0, mTimeSize, sTimeSize);
+      parent -> survivalBase = makeSurvivalBase(0, mTimeSize, aeTimeSize, sTimeSize);
       parent -> survivalBase -> base = parent;
     }
     else {
       parent -> competingRiskBase = makeCompetingRiskBase(eTypeSize, mTimeSize, sTimeSize);
       parent -> competingRiskBase -> base = parent;
     }
+  }
+  else if (rnfCount > 0) {
+    parent -> regressionBase = makeRegressionBase(rnfCount, rnfIndex, NULL);
+    parent -> regressionBase -> base = parent;
+  }
+  else if (rfCount > 0) {
+    parent -> classificationBase = makeClassificationBase(rfCount, rfIndex, rfSize);
+    parent -> classificationBase -> base = parent;
   }
 }
 TerminalRegression *makeRegressionBase(uint rnfCount, uint *rnfIndex, uint *dummy) {
@@ -72,18 +73,26 @@ TerminalClassification *makeClassificationBase(uint rfCount, uint *rfIndex, uint
   parent -> maxClass = NULL;
   return parent;
 }
-TerminalSurvival *makeSurvivalBase(uint dummy, uint mTimeSize, uint sTimeSize) {
+TerminalSurvival *makeSurvivalBase(uint dummy, uint mTimeSize, uint aeTimeSize, uint sTimeSize) {
   TerminalSurvival *parent = (TerminalSurvival*) gblock((size_t) sizeof(TerminalSurvival));
   parent -> eTypeSize = 1;
   parent -> mTimeSize = mTimeSize;
+  parent -> aeTimeSize = aeTimeSize;
   parent -> sTimeSize = sTimeSize;
+  parent -> atRiskCount = NULL;
+  parent -> atRiskTime = NULL;
+  parent -> eventCount = NULL;
+  parent -> eventTimeIndex = NULL;
   parent -> localRatio = NULL;
   parent -> localSurvival = NULL;
   parent -> localNelsonAalen = NULL;
   parent -> localHazard = NULL;
-  parent -> survival = NULL;
+  parent -> allNelsonAalen = NULL;
   parent -> nelsonAalen = NULL;
+  parent -> allHazard = NULL;
   parent -> hazard = NULL;
+  parent -> survival = NULL;
+  parent -> outcome = NULL;
   return parent;
 }
 TerminalCompetingRisk *makeCompetingRiskBase(uint eTypeSize, uint mTimeSize, uint sTimeSize) {
@@ -91,6 +100,15 @@ TerminalCompetingRisk *makeCompetingRiskBase(uint eTypeSize, uint mTimeSize, uin
   parent -> eTypeSize = eTypeSize;
   parent -> mTimeSize = mTimeSize;
   parent -> sTimeSize = sTimeSize;
+  parent -> atRiskCount = NULL;
+  parent -> atRiskTime = NULL;
+  parent -> eventCount = NULL;
+  parent -> eventTimeIndex = NULL;
+  parent -> localRatio = NULL;
+  parent -> localCSH = NULL;
+  parent -> localCIF = NULL;
+  parent -> CSH = NULL;
+  parent -> CIF = NULL;
   parent -> outcome = NULL;
   return parent;
 }
@@ -130,13 +148,13 @@ void unstackMultiClassProb(TerminalClassification *tTerm) {
     tTerm -> maxClass = NULL;
   }
 }
-void stackSurvival(TerminalSurvival *tTerm) {
-  tTerm -> survival = dvector(1, tTerm -> sTimeSize);
+void stackAllNelsonAalen(TerminalSurvival *tTerm) {
+  tTerm -> allNelsonAalen = dvector(1, tTerm -> aeTimeSize);
 }
-void unstackSurvival(TerminalSurvival *tTerm) {
-  if (tTerm -> survival != NULL) {
-    free_dvector(tTerm -> survival, 1, tTerm -> sTimeSize);
-    tTerm -> survival = NULL;
+void unstackAllNelsonAalen(TerminalSurvival *tTerm) {
+  if (tTerm -> allNelsonAalen != NULL) {
+    free_dvector(tTerm -> allNelsonAalen, 1, tTerm -> aeTimeSize);
+    tTerm -> allNelsonAalen = NULL;
   }
 }
 void stackNelsonAalen(TerminalSurvival *tTerm) {
@@ -148,6 +166,15 @@ void unstackNelsonAalen(TerminalSurvival *tTerm) {
     tTerm -> nelsonAalen = NULL;
   }
 }
+void stackAllHazard(TerminalSurvival *tTerm) {
+  tTerm -> allHazard = dvector(1, tTerm -> aeTimeSize);
+}
+void unstackAllHazard(TerminalSurvival *tTerm) {
+  if (tTerm -> allHazard != NULL) {
+    free_dvector(tTerm -> allHazard, 1, tTerm -> aeTimeSize);
+    tTerm -> allHazard = NULL;
+  }
+}
 void stackHazard(TerminalSurvival *tTerm) {
   tTerm -> hazard = dvector(1, tTerm -> sTimeSize);
 }
@@ -155,6 +182,15 @@ void unstackHazard(TerminalSurvival *tTerm) {
   if (tTerm -> hazard != NULL) {
     free_dvector(tTerm -> hazard, 1, tTerm -> sTimeSize);
     tTerm -> hazard = NULL;
+  }
+}
+void stackSurvival(TerminalSurvival *tTerm) {
+  tTerm -> survival = dvector(1, tTerm -> sTimeSize);
+}
+void unstackSurvival(TerminalSurvival *tTerm) {
+  if (tTerm -> survival != NULL) {
+    free_dvector(tTerm -> survival, 1, tTerm -> sTimeSize);
+    tTerm -> survival = NULL;
   }
 }
 void stackSurvivalOutcome(TerminalSurvival *tTerm) {
@@ -193,6 +229,56 @@ void unstackCompetingRiskOutcome(TerminalCompetingRisk *tTerm) {
     tTerm -> outcome = NULL;
   }
 }
+void stackAtRiskAndEventCount(TerminalSurvival *tTerm) {
+  tTerm -> atRiskCount     = uivector(1, tTerm -> mTimeSize);
+  tTerm -> eventCount      = uimatrix(1, tTerm -> eTypeSize, 1, tTerm -> mTimeSize);
+}
+void unstackAtRiskAndEventCount(TerminalSurvival *tTerm) {
+  if (tTerm -> atRiskCount != NULL) {
+    free_uivector(tTerm -> atRiskCount, 1, tTerm -> mTimeSize);
+    tTerm -> atRiskCount = NULL;
+  }
+  if (tTerm -> eventCount != NULL) {
+    free_uimatrix(tTerm -> eventCount, 1, tTerm -> eTypeSize, 1, tTerm -> mTimeSize);
+    tTerm -> eventCount = NULL;
+  }
+}
+void stackEventTimeIndex(TerminalSurvival *tTerm) {
+  tTerm -> eventTimeIndex  = uivector(1, tTerm -> eTimeSize + 1);
+}
+void unstackEventTimeIndex(TerminalSurvival *tTerm) {
+  if (tTerm -> eventTimeIndex != NULL) {
+    free_uivector(tTerm -> eventTimeIndex, 1, tTerm -> eTimeSize + 1);
+    tTerm -> eventTimeIndex = NULL;
+  }
+}
+void stackLocalRatio(TerminalSurvival *tTerm) {
+  tTerm -> localRatio = dmatrix(1, tTerm -> eTypeSize, 1, tTerm -> eTimeSize);
+}
+void unstackLocalRatio(TerminalSurvival *tTerm) {
+  if (tTerm -> localRatio != NULL) {
+    free_dmatrix(tTerm -> localRatio, 1, tTerm -> eTypeSize, 1, tTerm -> eTimeSize);
+    tTerm -> localRatio = NULL;
+  }
+}
+void stackLocalNelsonAalen(TerminalSurvival *tTerm) {
+  tTerm -> localNelsonAalen = dvector(1, tTerm -> eTimeSize);
+}
+void unstackLocalNelsonAalen(TerminalSurvival *tTerm) {
+  if (tTerm -> localNelsonAalen != NULL) {
+    free_dvector(tTerm -> localNelsonAalen, 1, tTerm -> eTimeSize);
+    tTerm -> localNelsonAalen = NULL;
+  }
+}
+void stackLocalHazard(TerminalSurvival *tTerm) {
+  tTerm -> localHazard = dvector(1, tTerm -> eTimeSize);
+}
+void unstackLocalHazard(TerminalSurvival *tTerm) {
+  if (tTerm -> localHazard != NULL) {
+    free_dvector(tTerm -> localHazard, 1, tTerm -> eTimeSize);
+    tTerm -> localHazard = NULL;
+  }
+}
 void freeTerminalBase(TerminalBase *parent) {
   deinitTerminalBase(parent);
   free_gblock(parent, (size_t) sizeof(TerminalBase));
@@ -229,9 +315,12 @@ void freeClassificationBase(TerminalClassification *parent) {
 }
 void freeSurvivalBase(TerminalSurvival *parent) {
   if (parent != NULL) {
-    unstackSurvival(parent);
+    unstackAllNelsonAalen(parent);
     unstackNelsonAalen(parent);
+    unstackAllHazard(parent);
     unstackHazard(parent);
+    unstackSurvival(parent);
+    unstackSurvivalOutcome(parent);
     free_gblock(parent, (size_t) sizeof(TerminalSurvival));
   }
 }

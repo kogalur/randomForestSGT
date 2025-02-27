@@ -399,16 +399,15 @@ sim <- list(
            data.frame(y=y,x)
 })
 
-## run simulations: we will use pure lasso
+## run rfsgt on the simulations
 n <- 500
 max.hcut <- 3
-pure.lasso <- TRUE
 results <- lapply(names(sim), function(nm) {
   cat("simulation:", nm, "\n")
   d <- sim[[nm]](n=n)
   rO <- data.frame(do.call(rbind, lapply(0:max.hcut, function(hcut) {
    cat("     hcut:", hcut, "\n")
-   o <- rfsgt(y~.,d,hcut=hcut,pure.lasso=pure.lasso)
+   o <- rfsgt(y~.,d,hcut=hcut)
    c(hcut, tail(o$err.rate, 1), tail(o$err.rate, 1) / var(o$yvar))
   })))
   colnames(rO) <- c("hcut", "mse", "smse")

@@ -451,7 +451,7 @@ char stackPreDefinedCommonArrays(char          mode,
                  subjWeightDensitySize); 
   }
   *getTreeIndex = uivector(1, ntree);
-  if (mode == RF_GROW) {
+  if ((mode == RF_GROW) || (getTree == NULL)) {
     for (i = 1; i <= ntree; i++) {
       (*getTreeIndex)[i] = i;
     }
@@ -782,8 +782,6 @@ char stackAndInitializeTimeAndSubjectArrays(char     mode,
         adjObsSize = observationSize;
       }
       else {
-        RF_optHigh = RF_optHigh & (~OPT_MEMB_OUTG);
-        RF_optHigh = RF_optHigh & (~OPT_TERM_OUTG);
         RF_opt                  = RF_opt & (~OPT_PERF);
         RF_opt                  = RF_opt & (~OPT_VIMP);
         *masterTime  = dvector(1, 2 * observationSize);

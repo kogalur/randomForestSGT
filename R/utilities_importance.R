@@ -127,7 +127,7 @@ vimp.rfsgt <- function(f, dta, ntree=50, hcut=1, treesize=3,
   dots <- list(...)
   dots$tune <- dots$filter <- FALSE
   dots$perf.type <- "none"
-  dots$experimental.bits <- integer(0)
+  dots$experimental.bits <- as.integer(0)
   ##-------------------------------------------------------------------
   ##
   ## super greedy forest call 

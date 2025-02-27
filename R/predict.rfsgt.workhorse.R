@@ -91,7 +91,7 @@ predict.rfsgt.workhorse <-  function(object,
   }
   else {
     object.version <- as.integer(unlist(strsplit(object$version, "[.]")))
-    installed.version <- as.integer(unlist(strsplit("0.0.1.54", "[.]")))
+    installed.version <- as.integer(unlist(strsplit("0.0.1.60", "[.]")))
     minimum.version <- as.integer(unlist(strsplit("0.0.0.0", "[.]")))
     object.version.adj <- object.version[1] + (object.version[2]/10) + (object.version[3]/100)
     installed.version.adj <- installed.version[1] + (installed.version[2]/10) + (installed.version[3]/100)

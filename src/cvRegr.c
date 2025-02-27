@@ -203,13 +203,15 @@ CDLInfo *crossValidationRegr(uint     threadID,
           cdrMaster -> valid = TRUE;
         }
       }
-      if (cdrMaster -> valid == FALSE) {
-        l = 0;
-        while ((cdrMaster -> valid == FALSE) && (l < pSize)) {
-          l ++;
-          if (fabs(cdrMaster -> beta[cdrMaster -> lambda1SEIndxMin][l + 1]) > EPSILON) {
-            cdrMaster -> valid = TRUE;
-            cdrMaster -> lambdaTargetIndx = cdrMaster -> lambda1SEIndxMin;
+      if (SG_optLocal & SG_OPT_SWTCH_SEVEN) {
+        if (cdrMaster -> valid == FALSE) {
+          l = 0;
+          while ((cdrMaster -> valid == FALSE) && (l < pSize)) {
+            l ++;
+            if (fabs(cdrMaster -> beta[cdrMaster -> lambda1SEIndxMin][l + 1]) > EPSILON) {
+              cdrMaster -> valid = TRUE;
+              cdrMaster -> lambdaTargetIndx = cdrMaster -> lambda1SEIndxMin;
+            }
           }
         }
       }

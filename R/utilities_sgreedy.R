@@ -1,71 +1,4 @@
 ##########################################################################
-###    On experimental bits:
-###
-###    experimental.bits = 0
-###
-###    We allow only lasso splits.  Furthermore, we demand that lasso
-###    (for daughter beta's) also succeed. If the split fails, and/or
-###    the lasso for the daughter beta's fail, we terminate the node!
-###    We do not even enter this routine if the failure occurs at the
-###    root node.  The tree is stumped.
-###
-###
-###    experimental.bits = 2^2
-### 
-###    This gets you Eqn. 4 in the note. The virtual split of a node is
-###    only allowed to switch from lasso daugter predictors to cart
-###    daughter predictors when (4) is met.
-###    
-###    experimental.bits = 2^3
-###
-###    This gets you the "more flexible strategy right after Eqn. 4.
-###    We can call this Eqn. 4a. One, both, or no daughters are
-###    switched from lasso daugter predictors to cart daughter
-###    predictors in this scenario.
-###
-###    experimental.bits = 2^4
-###
-###    This gets you Section 3 instead of Section 2.  More specifically
-###    it gets you Eqn. 6 instead of Eqn. 4.  We switch from a lasso split
-###    to a cart split if Eqn. 6 is satisfied.  We can do this because we
-###    always test both cart and lasso virtual splits at every node. 
-###
-###    experimental.bits = 2^5
-###
-###    In rare cases, you want the root node to start with a cart
-###    predictor and stay a cart tree.  This can operate independently
-###    of all other bits.
-###
-###    We don't calculate the loss in empirical risk between a
-###    lasso split and a cart split at the root node.  Instead we only
-###    look at the resulting risk of the sum of the daughters.
-###
-###    We do this because, there are cases when the cart risk at the
-###    root node could be really high, and then if you looked at the
-###    cart virtual split, it does a really good job, and the loss
-###    would be huge.
-###
-###    But when you compare the resulting sum of the daughter risks
-###    (the risk represented by the tree after one virtual split), the
-###    lasso split can actually be better.  So we look at the total
-###    risk at depth = 1, after one split.
-###
-###    Finally, note that for the lasso risk, it can be based on cart outcomes if
-###    lasso fails on the daughters.  So we can have
-###    total lasso risk at depth 1 = eRiskLeftLasso + eRiskRightLasso
-###    or                            eRiskLeftCart  + eRiskRightCart
-###    or                            eRiskLeftLasso + eRiskRightCart
-###    or                            eRiskLeftCart  + eRiskRightLasso
-###
-###    experimental.bits = 2^6
-###
-###    This will swap out the lasso daughter predictor with a cart
-###    daugtor predictor for terminal nodes only, if the cart risk is
-###    less than the lasso risk. This is not mutually exclusive of the
-###    other experimental bits.
-###
-##########################################################################
-###
 ### experimental bits
 ###
 ### The following are mutually exclusive, and you must set one and only one bit.
@@ -77,21 +10,39 @@
 ### This gets you Eqn. 4 in the note. The virtual split to a cell A is only allowed to switch from lasso to cart daughter predictors when (4) is met.
 ###
 ### experimental.bits = 2^3
-### This gets you the "more flexible strategy right after Eqn. 4.  We can call this Eqn. 4a. One, both, or no daughters are switched from lasso to cart predictors in this scenario.
+### This gets you the "more flexible strategy right after Eqn. 4.
+### We can call this Eqn. 4a. One, both, or no daughters are switched from lasso to cart predictors in this scenario.
 ###
 ### experimental.bits = 2^4
-### This gets you Section 3 instead of Section 2.  More specifically it gets you Eqn. 6 instead of Eqn. 4.  We switch from a lasso split to a cart split if Eqn. 6 is satisfied.
+### This gets you Section 3 instead of Section 2.
+### More specifically it gets you Eqn. 6 instead of Eqn. 4.  We switch from a lasso split to a cart split if Eqn. 6 is satisfied.
 ### We can do this because we always test both cart and lasso virtual splits at every node. It gives us a lot of flexibility.
 ###
 ### experimental.bits = 2^5.
-### Finally, in rare cases, you want the root node to start with a cart predictor and stay a cart tree.  This is not mutually exclusive of the other experimental bits.
+### Finally, in rare cases, you want the root node to start with a cart predictor and stay a cart tree.
+### This is not mutually exclusive of the other experimental bits.
 ###
 ### experimental.bits = 2^6
-### This will swap out the lasso predictor with a cart predictor for terminal nodes only, if the cart risk is less than the lasso risk. This is not mutually exclusive of the other experimental bits.
+### This will swap out the lasso predictor with a cart predictor for terminal nodes only, if the cart risk is less than the lasso risk.
+### This is not mutually exclusive of the other experimental bits.
 ###
+###  experimental.bits = 2^7
+###
+###  When this bit is low, we check the betas at lambdaMinIndx, and
+###  ensure they are not all zero.  If they are zero we fail the
+###  master, otherwise we indicate success and use lambdaMinIndx as
+###  target.  When the bit is high, we attempt the previous check,
+###  but if the result is false, we check the betas at
+###  lambda1SEIndxMin.  If the betas at this back-up value are
+###  non-zero, we indicate success and use lambda1SEIndxMin as the
+###  target.  Otherwise, if both checks fail, we fail the master.
 ##########################################################################
 get.experimental.bits  <- function(experimental.bits, hcut) {
   if (!is.null(experimental.bits)) {
+    ## zero --> 2^7
+    if (experimental.bits == 0) {##pure lasso+lambda1SEIndxMin
+      as.integer(2^7)
+    }
     experimental.bits
   }
   else {

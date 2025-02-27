@@ -7,7 +7,8 @@
 #define SG_OPT_SWTCH_FOUR   0x00000010 
 #define SG_OPT_SWTCH_FIVE   0x00000020 
 #define SG_OPT_SWTCH_SIX    0x00000040 
-#define SG_OPT_REAL_TIME    0x00000080 
+#define SG_OPT_SWTCH_SEVEN  0x00000080 
+#define SG_OPT_REAL_TIME    0x00000100 
 #define SG_CPU_TIME   0  
 #define SG_BETA        1  
 #define SG_LAMBDA_CT   2  

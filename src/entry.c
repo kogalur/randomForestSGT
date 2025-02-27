@@ -461,7 +461,12 @@ SEXP entryPred(SEXP traceFlag,
   SG_rmbrTNodeID_ = (uint *) INTEGER(rmbrID); SG_rmbrTNodeID_ --;
   SG_ombrTNodeID_ = (uint *) INTEGER(ombrID); SG_ombrTNodeID_ --;
   RF_perfBlock            = INTEGER(perfBlock)[0];
-  RF_getTree = (uint *) INTEGER(getTree);  RF_getTree --;
+  if (getTree != R_NilValue) {
+    RF_getTree = (uint *) INTEGER(getTree);  RF_getTree --;
+  }
+  else {
+    RF_getTree = NULL;
+  }
   RF_numThreads           = INTEGER(numThreads)[0];
   SG_tcpPort = 0;
   SG_tcpTimeOut = 0;

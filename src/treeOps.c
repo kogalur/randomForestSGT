@@ -454,6 +454,7 @@ char growTreeLOT (uint treeID, Node *root) {
                      0, 
                      0, 
                      0, 
+                     0, 
                      RF_rNonFactorCount,   
                      RF_rNonFactorIndex,   
                      RF_rFactorCount,      
@@ -796,6 +797,7 @@ void restoreTreeLOT(uint treeID, Node *parent, ulong *offsetTree) {
     TerminalBase *termBasePtr = (TerminalBase *) termPtr;
     RF_leafLinkedObjTail[treeID] -> termPtr = termBasePtr;
     initTerminalBase(termBasePtr,
+                     0, 
                      0, 
                      0, 
                      0, 
