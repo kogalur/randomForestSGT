@@ -177,7 +177,7 @@ is.hidden.rt <-  function(dots) {
 }
 get.rt.bits  <- function(real.time) {
   if (real.time == TRUE) {
-    bits  <- 2^8
+    bits  <- 2^7
   }
   else {
     bits  <- 0

@@ -248,6 +248,19 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
                 }
                 else if (currDO -> record[0] == SG_TCP_CTRL_TSZ) {
                   if (currDO -> userState == SG_DESC_POSTPREDICTING) {
+                    ctrlID = currDO -> userState;
+                  }
+                  else {
+                    ctrlID = SG_TCP_CTRL_NAK;
+                  }
+                }
+                else {
+                }
+                  result = serverSend(listen_i, &ctrlID, 1);
+                  if (result < 0) {
+                    closeConn = TRUE;
+                  }
+                if (((currDO -> record[0] == SG_TCP_CTRL_TSZ) && ((currDO -> userState) == SG_DESC_POSTPREDICTING))) {
                     hboLength = currDO -> nSize;
                     nboLength = htons(hboLength);
                     result = send(listen_i, &nboLength, sizeof(uint16_t), 0);
@@ -260,20 +273,11 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
                     }
                     else {
                     }
-                  }
                 }
-                else {
-                }
-                if (!(currDO -> record[0] == SG_TCP_CTRL_TSZ)) {
-                  result = serverSend(listen_i, &ctrlID, 1);
-                  if (result < 0) {
-                    closeConn = TRUE;
-                  }
-                }
-                if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_PREWRITING))) {
+                else if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_PREWRITING))) {
                   currDO -> userState = SG_DESC_WRITING;
                 }
-                if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_WRITING))) {
+                else if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_WRITING))) {
                   (currDO -> nSent) ++;
                   nbo_recordID = htonl(currDO -> nIndx[currDO -> nSent]);
                   currDO -> yHatPacket -> recordID = nbo_recordID;
@@ -284,7 +288,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
                     resetDescriptorObj(currDO, SG_SOCK_STATE_OPN);
                   }
                 }
-                if (((currDO -> record[0] == SG_TCP_CTRL_EOF) && ((currDO -> userState) == SG_DESC_READING))) {
+                else if (((currDO -> record[0] == SG_TCP_CTRL_EOF) && ((currDO -> userState) == SG_DESC_READING))) {
 #ifdef _OPENMP
                   omp_set_lock(&SG_lockDO);
 #endif

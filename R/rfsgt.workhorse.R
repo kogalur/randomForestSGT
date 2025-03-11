@@ -76,6 +76,9 @@ rfsgt.workhorse <- function(formula,
   ## filtering is switched off and we build the augmented x here
   if (inherits(filter, "tune.hcut")) {
     hcut <- attr(filter, "hcut")
+    if (!is.null(attr(filter, "pure.lasso"))) {
+      pure.lasso <- attr(filter, "pure.lasso")
+    }
     baselearnerO <- filter.baselearner(xvar, filter)
     xvar <- baselearnerO$x[, baselearnerO$xvar.names, drop = FALSE]
     hcutCnt <- ncol(xvar)
@@ -86,7 +89,7 @@ rfsgt.workhorse <- function(formula,
     }
     else {
       ## no augmented variables were selected: need to re-initalize hcut
-      hcut <- 1
+      hcut <- min(hcut, 1) ## hcut can be 0
       augmentX <- augmentXlist <- NULL
     }
     filter <- baselearner.flag <- FALSE
@@ -396,7 +399,7 @@ rfsgt.workhorse <- function(formula,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
                       ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
-                      version = "0.0.1.60")
+                      version = "0.0.1.62")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   nodeStat <- NULL

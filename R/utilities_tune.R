@@ -10,14 +10,17 @@ use.tune.hcut <- function(f, hcut = NULL) {
   hcut.idx <- which(hcut == hcutSeq)
   fnew <- attr(f, "all")[[hcut.idx]]
   attributes(fnew) <- attributes(f)
-  attr(fnew, "hcut") <- hcutSeq[hcut.idx]  
+  attr(fnew, "hcut") <- hcutSeq[hcut.idx]
+  if (!is.null(attr(f, "pure.lasso"))) {
+    attr(fnew, "pure.lasso") <- attr(f, "pure.lasso.all")[hcut.idx]
+  }
   fnew
 }
 tune.hcut <- function(f, data, hcut=3,
-                       ntree=1, treesize=3,
-                       hcut.threshold=3, nfolds=10,
-                       method=c("min", "conserve")[2],
-                       verbose=FALSE, p.filter=40) {
+                      ntree=5, treesize=5,
+                      hcut.threshold=3, nfolds=10,
+                      pure.lasso.check=TRUE,
+                      verbose=FALSE, p.filter=40) {
   ## hcut sequence to be evaluated
   hcut.max <- hcut
   hcutSeq <- 0:hcut.max
@@ -44,8 +47,8 @@ tune.hcut <- function(f, data, hcut=3,
   }
   ## dimension reduction for each hcut
   dots <- list()
-  dots$tune <- FALSE
   dots$ntree <- 1
+  dots$tune <- FALSE
   dots$bootstrap <- "none"
   xd <- lapply(hcutSeq, function(hcut) {
     if (verbose) cat("dimension reduction, hcut:", hcut, "\n")
@@ -66,39 +69,69 @@ tune.hcut <- function(f, data, hcut=3,
     names(xdn) <- hcutSeq
     print(xdn)
   }
-  ## prelimary for hcut optimization
+  ## prelimary calculations for hcut optimization
   N <- nrow(x)
   folds <- cv.folds(N, nfolds)
   dots <- list()
   dots$hcut <- 1
+  dots$ntree <- ntree
+  dots$treesize <- treesize
   dots$tune <- dots$filter <- FALSE
   if (ntree==1) {
     dots$bootstrap <- "none"
   }
   ## cv-loop
+  dots$pure.lasso <- FALSE
   cv <- data.frame(do.call(rbind, lapply(1:length(hcutSeq), function(k) {
     if (verbose) cat("cv hcut:", hcutSeq[k], "\n")
     cvk <- sapply(folds, function(tst) {
       trn <- setdiff(1:N, tst)
       d.trn <- data.frame(data[trn,yvar.names,drop=FALSE],xd[[k]][trn,,drop=FALSE])
       x.tst <- xd[[k]][tst,,drop=FALSE]
-      o <- do.call("rfsgt", c(list(f, d.trn, ntree=ntree), dots))
+      o <- do.call("rfsgt", c(list(f, d.trn), dots))
       mean((predict.rfsgt(o,x.tst)$predicted - data[tst,yvar.names])^2, na.rm=TRUE)
     })
     c(hcutSeq[k], mean(cvk, na.rm=TRUE), sd(cvk, na.rm=TRUE) / sqrt(nfolds))
   })))
-  ## process results
-  cvm <- cv[, 2]
-  cvs <- cv[, 3]
   colnames(cv) <- c("hcut", "err", "serr")
   ## verbose
   if (verbose) print(cv)
-  ## optimized hcut
-  idx.min <- which.min(cvm)[1]
-  idx.conserve <- which(cvm <= (min(cvm, na.rm=TRUE) + cvs))[1]
-  idx <- if (method == "min") idx.min else idx.conserve
+  ## cv-loop - pure.lasso
+  if (pure.lasso.check) {
+    dots$pure.lasso <- TRUE
+    cv.pure <- data.frame(do.call(rbind, lapply(1:length(hcutSeq), function(k) {
+      if (verbose) cat("cv hcut (pure lasso):", hcutSeq[k], "\n")
+      cvk <- sapply(folds, function(tst) {
+        trn <- setdiff(1:N, tst)
+        d.trn <- data.frame(data[trn,yvar.names,drop=FALSE],xd[[k]][trn,,drop=FALSE])
+        x.tst <- xd[[k]][tst,,drop=FALSE]
+        o <- do.call("rfsgt", c(list(f, d.trn), dots))
+        mean((predict.rfsgt(o,x.tst)$predicted - data[tst,yvar.names])^2, na.rm=TRUE)
+      })
+      c(hcutSeq[k], mean(cvk, na.rm=TRUE), sd(cvk, na.rm=TRUE) / sqrt(nfolds))
+    })))
+    colnames(cv.pure) <- c("hcut", "err", "serr")    
+  }
+  ## verbose: print pure lasso results (if requested)
+  if (verbose && pure.lasso.check) print(cv.pure)
+  ## determine the optimal hcut (use non-pure lasso which is more robust)
+  idx <- which.min(cv[, 2])[1]
+  ## set the pure lasso option
+  ## pure lasso cv has to be convincing:  plus one maximal standard error
+  if (pure.lasso.check) {
+    pure.lasso.all <- cv[, 2] > (cv.pure[, 2] + max(cv.pure[, 3], na.rm=TRUE))
+    pure.lasso.all[1] <- FALSE #hcut=0
+    if (all(pure.lasso.all[-1])) {#if pure lasso dominates, then choose hcut based on pure cv
+      cv.pure[1, 2] <- max(cv[1, 2], cv.pure[1, 2], na.rm=TRUE) #hcut=0
+      idx <- which.min(cv.pure[, 2])[1]
+    }
+    pure.lasso <- pure.lasso.all[idx]
+  }
+  else {
+    pure.lasso <- pure.lasso.all <- NULL
+  }
   ## verbose
-  if (verbose) cat(paste0("optimal hcut using method=", method, ":"), cv$hcut[idx], "\n")
+  if (verbose) cat(paste0("optimal hcut="), hcutSeq[idx], "\n")
   ## return the goodies
   filter <- colnames(xd[[idx]])
   attr(filter, "all") <- lapply(xd, function(x) {colnames(x)})
@@ -106,10 +139,11 @@ tune.hcut <- function(f, data, hcut=3,
   attr(filter, "formula.all") <- lapply(xd, function(x) {
     filter.baselearner.workhorse(colnames(x))})
   attr(filter, "cv") <- cv
-  attr(filter, "hcut") <- cv$hcut[idx]
-  attr(filter, "hcut.min") <- cv$hcut[idx.min]
-  attr(filter, "hcut.1se") <- cv$hcut[idx.conserve]
-  attr(filter, "hcutSeq") <- cv$hcut
+  attr(filter, "cv.pure") <- cv.pure
+  attr(filter, "hcut") <- hcutSeq[idx]
+  attr(filter, "hcutSeq") <- hcutSeq
+  attr(filter, "pure.lasso") <- pure.lasso
+  attr(filter, "pure.lasso.all") <- pure.lasso.all
   class(filter) <- "tune.hcut"
   filter
 }
