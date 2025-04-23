@@ -311,6 +311,9 @@ char sgtMain(char mode, int seedValue) {
                                       RF_observationSize,
                                       RF_responseIn,
                                       RF_rFactorIndex,
+                                      RF_frSize,
+                                      RF_fresponseIn,
+                                      RF_fobservationSize,
                                       &RF_rLevels,
                                       &RF_classLevelSize,
                                       &RF_classLevel,
@@ -347,16 +350,13 @@ char sgtMain(char mode, int seedValue) {
             SG_threadV = SG_THREADV_NFOLD;
             ranChainCnt = RF_ntree;
           }
-          ran1A = &randomChainParallel;
-          ran1B = &randomChainParallel2;
-          ran1D = &randomChainParallel3;
-          randomSetChain     = &randomSetChainParallel;
-          randomSetChain2    = &randomSetChainParallel2;
-          randomSetChain3    = &randomSetChainParallel3;
-          randomGetChain     = &randomGetChainParallel;
-          randomGetChain2    = &randomGetChainParallel2;
-          randomGetChain3    = &randomGetChainParallel3;
-          stackRandom(ranChainCnt);
+          ran1A = &randomChainParallelA;
+          ran1B = &randomChainParallelB;
+          randomSetChainA    = &randomSetChainParallelA;
+          randomSetChainB    = &randomSetChainParallelB;
+          randomGetChainA    = &randomGetChainParallelA;
+          randomGetChainB    = &randomGetChainParallelB;
+          stackRandom(ranChainCnt, ranChainCnt, 0, 0);
           if (mode == RF_GROW) {
             seedValueLC = abs(seedValue);
             lcgenerator(&seedValueLC, TRUE);
@@ -366,9 +366,9 @@ char sgtMain(char mode, int seedValue) {
               while(seedValueLC == 0) {
                 lcgenerator(&seedValueLC, FALSE);
               }
-              randomSetChain(b, -seedValueLC);
+              randomSetChainA(b, -seedValueLC);
               if (RF_opt & OPT_SEED) {
-                RF_seed_[b] = randomGetChain(b);
+                RF_seed_[b] = randomGetChainA(b);
               }
             }
             for (b = 1; b <= ranChainCnt; b++) {
@@ -377,20 +377,12 @@ char sgtMain(char mode, int seedValue) {
               while(seedValueLC == 0) {
                 lcgenerator(&seedValueLC, FALSE);
               }
-              randomSetChain2(b, -seedValueLC);
-            }
-            for (b = 1; b <= ranChainCnt; b++) {
-              lcgenerator(&seedValueLC, FALSE);
-              lcgenerator(&seedValueLC, FALSE);
-              while(seedValueLC == 0) {
-                lcgenerator(&seedValueLC, FALSE);
-              }
-              randomSetChain3(b, -seedValueLC);
+              randomSetChainB(b, -seedValueLC);
             }
           }  
           else {
             for (b = 1; b <= ranChainCnt; b++) {
-              randomSetChain(b , RF_seed_[b]);
+              randomSetChainA(b , RF_seed_[b]);
             }
             seedValueLC = abs(seedValue);
             lcgenerator(&seedValueLC, TRUE);
@@ -400,15 +392,7 @@ char sgtMain(char mode, int seedValue) {
               while(seedValueLC == 0) {
                 lcgenerator(&seedValueLC, FALSE);
               }
-              randomSetChain2(b, -seedValueLC);
-            }
-            for (b = 1; b <= ranChainCnt; b++) {
-              lcgenerator(&seedValueLC, FALSE);
-              lcgenerator(&seedValueLC, FALSE);
-              while(seedValueLC == 0) {
-                lcgenerator(&seedValueLC, FALSE);
-              }
-              randomSetChain3(b, -seedValueLC);
+              randomSetChainB(b, -seedValueLC);
             }
           }
 #ifdef _OPENMP
@@ -498,7 +482,7 @@ char sgtMain(char mode, int seedValue) {
           }
           freeAugmentationObjCommonGeneric(SG_augmObjCommon);
           unstackDefinedOutputObjects(mode);
-          unstackRandom(RF_ntree);
+          unstackRandom(ranChainCnt, ranChainCnt, 0, 0);
 #ifdef _OPENMP
           unstackLocksOpenMP(mode);
 #endif

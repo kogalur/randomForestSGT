@@ -77,16 +77,10 @@ void cdlMain(char mode, int seedValue) {
   SG_threadV = SG_THREADV_NFOLD;
   RF_ntree = 0;
   uint ranChainCnt = 1;
-  ran1A = &randomChainParallel;
-  ran1B = &randomChainParallel2;
-  ran1D = &randomChainParallel3;
-  randomSetChain     = &randomSetChainParallel;
-  randomSetChain2    = &randomSetChainParallel2;
-  randomSetChain3    = &randomSetChainParallel3;
-  randomGetChain     = &randomGetChainParallel;
-  randomGetChain2    = &randomGetChainParallel2;
-  randomGetChain3    = &randomGetChainParallel3;
-  stackRandom(ranChainCnt);
+  ran1A = &randomChainParallelA;
+  randomSetChainA    = &randomSetChainParallelA;
+  randomGetChainA    = &randomGetChainParallelA;
+  stackRandom(ranChainCnt, 0, 0, 0);
   seedValueLC = abs(seedValue);
   lcgenerator(&seedValueLC, TRUE);
   for (b = 1; b <= ranChainCnt; b++) {
@@ -95,23 +89,7 @@ void cdlMain(char mode, int seedValue) {
     while(seedValueLC == 0) {
       lcgenerator(&seedValueLC, FALSE);
     }
-    randomSetChain(b, -seedValueLC);
-  }
-  for (b = 1; b <= ranChainCnt; b++) {
-    lcgenerator(&seedValueLC, FALSE);
-    lcgenerator(&seedValueLC, FALSE);
-    while(seedValueLC == 0) {
-      lcgenerator(&seedValueLC, FALSE);
-    }
-    randomSetChain2(b, -seedValueLC);
-  }
-  for (b = 1; b <= ranChainCnt; b++) {
-    lcgenerator(&seedValueLC, FALSE);
-    lcgenerator(&seedValueLC, FALSE);
-    while(seedValueLC == 0) {
-      lcgenerator(&seedValueLC, FALSE);
-    }
-    randomSetChain3(b, -seedValueLC);
+    randomSetChainA(b, -seedValueLC);
   }
   stackIncomingArrays(mode,
                       RF_ntree,
@@ -231,6 +209,9 @@ void cdlMain(char mode, int seedValue) {
                               RF_observationSize,
                               RF_responseIn,
                               RF_rFactorIndex,
+                              RF_frSize,
+                              RF_fresponseIn,
+                              RF_fobservationSize,
                               &RF_rLevels,
                               &RF_classLevelSize,
                               &RF_classLevel,
@@ -397,5 +378,5 @@ void cdlMain(char mode, int seedValue) {
                         RF_ySize,
                         RF_yIndex,
                         RF_yIndexZero);
-  unstackRandom(ranChainCnt);
+  unstackRandom(ranChainCnt, 0, 0, 0);
 }

@@ -1,6 +1,6 @@
 Package: randomForestSGT
-Version: 0.0.1.62
-Date: 2025-03-11
+Version: 0.0.1.63
+Date: 2025-04-23
 Title: Random Forest Super Greedy Trees
 Author: Hemant Ishwaran <hemant.ishwaran@gmail.com>, Udaya B. Kogalur <ubk@kogalur.com>
 Maintainer: Udaya B. Kogalur <ubk@kogalur.com>

@@ -722,11 +722,21 @@ void stackForestObjectsOutput(char mode) {
       for (treeID = 1; treeID <= RF_ntree; treeID++) {
         localSize += RF_oobSize[treeID];
       }
-      SG_ombrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_OMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
+      if (localSize > 0) {
+        SG_ombrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_OMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
+        SG_ombrTNodeID_ --;
+      }
+      else {
+        localSize = 0;
+        for (uint treeID = 1; treeID <= RF_ntree; treeID++) {
+          localSize += RF_tLeafCount[treeID];
+        }
+        SG_ombrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_OMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
+        SG_ombrTNodeID_ --;
+      }
       localSize = (ulong) RF_ntree * RF_observationSize;
       SG_ambrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_AMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, &SG_ambrTNodeID_ptr, 2, RF_ntree, RF_observationSize);
       SG_rmbrTNodeID_ --;
-      SG_ombrTNodeID_ --;
       SG_ambrTNodeID_ --;
 }
 void writeForestObjectsOutput(char mode) {
