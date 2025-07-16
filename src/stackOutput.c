@@ -238,12 +238,11 @@ void stackDefinedOutputObjects(char mode) {
       if (RF_opt & OPT_SEED) {
         RF_stackCount += 1;
       }
-      if ((SG_hcut == 0) || (SG_hcut >= 1)) {
         RF_stackCount += 1;
         RF_stackCount += 16;
-      }
     }
     if (RF_opt & OPT_EMPR_RISK) {
+      RF_stackCount += 2;
       RF_stackCount += 2;
     }
     if (RF_optHigh & OPT_MEMB_USER) {
@@ -468,8 +467,10 @@ void stackDefinedOutputObjects(char mode) {
   }
   if (RF_opt & OPT_EMPR_RISK) {
     localSize = RF_ntree * SG_lotSize;
-    SG_emprRSK_      = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_EMP_RSK,  localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_emprRSKptr,    2, RF_ntree, SG_lotSize);
-    SG_oobEmprRSK_   = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_OEMP_RSK, localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_oobEmprRSKptr, 2, RF_ntree, SG_lotSize);
+    SG_emprRSK_      = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_EMPR_RSK,     localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_emprRSKptr,    2, RF_ntree, SG_lotSize);
+    SG_oobEmprRSK_   = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_OOB_EMPR_RSK, localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_oobEmprRSKptr, 2, RF_ntree, SG_lotSize);
+    SG_cart_emprRSK_      = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_CART_EMPR_RSK,     localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_cart_emprRSKptr,    2, RF_ntree, SG_lotSize);
+    SG_cart_oobEmprRSK_   = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_CART_OOB_EMPR_RSK, localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_cart_oobEmprRSKptr, 2, RF_ntree, SG_lotSize);
   }
   if (RF_optHigh & OPT_MEMB_USER) {
     localSize = RF_ntree * obsSize;
@@ -569,7 +570,6 @@ void stackForestObjectsPtrOnly(char mode) {
       SG_betaP_ptr     = (double ***) new_vvector(1, RF_ntree, NRUTIL_DPTR2);
       SG_nodeStat_ptr   = (double **) new_vvector(1, RF_ntree, NRUTIL_DPTR);
       SG_bsf_ptr   = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
-      if ((SG_hcut == 0) || (SG_hcut >= 1)) {
         for (i = 1; i <= RF_ntree; i++) {
           SG_betaP_ptr[i]  = (double **) new_vvector(1, SG_augmObjCommon -> hcutCnt, NRUTIL_DPTR);
         }
@@ -581,7 +581,6 @@ void stackForestObjectsPtrOnly(char mode) {
             SG_betaP_ptr[i][j]  = NULL;
           }
         }
-      }
       SG_rmbrTNodeCT_ptr = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
       SG_ombrTNodeCT_ptr = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
       for (i = 1; i <= RF_ntree; i++) {
@@ -601,11 +600,9 @@ void unstackForestObjectsPtrOnly(char mode) {
       for (treeID = 1; treeID <= RF_ntree; treeID++) {
         unstackTreeObjectsPtrOnly(treeID);
       }
-      if ((SG_hcut == 0) || (SG_hcut >= 1)) {
         for (i = 1; i <= RF_ntree; i++) {
           free_new_vvector(SG_betaP_ptr[i], 1, SG_augmObjCommon -> hcutCnt, NRUTIL_DPTR);
         }
-      }
       free_new_vvector(SG_treeID_ptr,     1, RF_ntree, NRUTIL_UPTR);
       free_new_vvector(SG_nodeID_ptr,     1, RF_ntree, NRUTIL_UPTR);
       free_new_vvector(SG_nodeSZ_ptr,     1, RF_ntree, NRUTIL_UPTR);
@@ -637,14 +634,12 @@ void stackTreeObjectsPtrOnly(char mode, uint treeID) {
     SG_prnodeID_ptr[treeID]   = uivector(1, nodeCount);
     SG_nodeStat_ptr[treeID]   =   dvector(1, nodeCount);
     SG_bsf_ptr[treeID]        =  uivector(1, nodeCount);
-    if ((SG_hcut == 0) || (SG_hcut >= 1)) {
       SG_yBar_ptr[treeID]  = dvector(1, nodeCount);
       SG_yStar_ptr[treeID] = dvector(1, nodeCount);        
       SG_betaZ_ptr[treeID] = dvector(1, nodeCount);
       for (j = 1; j <= SG_augmObjCommon -> hcutCnt; j++) {
         SG_betaP_ptr[treeID][j] = dvector(1, nodeCount);
       }
-    }
     SG_rmbrTNodeCT_ptr[treeID] = uivector(1, termCount);
     SG_ombrTNodeCT_ptr[treeID] = uivector(1, termCount);
     SG_rmbrTNodeID_ptr[treeID] = uivector(1, rmbrCount);
@@ -665,14 +660,12 @@ void unstackTreeObjectsPtrOnly(uint treeID) {
   free_uivector(SG_prnodeID_ptr[treeID],   1, nodeCount);
   free_dvector(SG_nodeStat_ptr[treeID],    1, nodeCount);
   free_uivector(SG_bsf_ptr[treeID],        1, nodeCount);
-  if ((SG_hcut == 0) || (SG_hcut >= 1)) {
     free_dvector(SG_yBar_ptr[treeID],  1, nodeCount);
     free_dvector(SG_yStar_ptr[treeID], 1, nodeCount);    
     free_dvector(SG_betaZ_ptr[treeID], 1, nodeCount);
     for (j = 1; j <= SG_augmObjCommon -> hcutCnt; j++) {
       free_dvector(SG_betaP_ptr[treeID][j], 1, nodeCount);
     }
-  }
   free_uivector(SG_rmbrTNodeCT_ptr[treeID], 1, termCount);
   free_uivector(SG_ombrTNodeCT_ptr[treeID], 1, termCount);
   free_uivector(SG_rmbrTNodeID_ptr[treeID], 1, rmbrCount);

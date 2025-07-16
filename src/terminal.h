@@ -5,7 +5,7 @@ struct terminal {
   struct terminalBase base;
   double mean;
   uint repMembrCount, oobMembrCount, ibgMembrCount;
-  uint allMembrSize;
+  uint allMembrCount;
   uint *oobMembrIndx, *repMembrIndx, *ibgMembrIndx;
 };
 #endif

@@ -84,30 +84,23 @@ SEXP entryGrow(SEXP traceFlag,
   SG_lotSize      = 0;
   SG_lotLag       = 0;
   SG_lotStrikeout = 0;
-  SG_lotCutMax2  = 0;
-  SG_lotCutMax3  = 0;
-  SG_lotCutMax4  = 0;
-  if (VECTOR_ELT(lot, 0) != R_NilValue) {
-    SG_hcut = INTEGER(VECTOR_ELT(lot, 0))[0];
-  }
-  if ((SG_hcut == 0) || (SG_hcut >= 1)) {
+  if (lot != R_NilValue) {
+    if (VECTOR_ELT(lot, 0) != R_NilValue) {
+      SG_hcut = INTEGER(VECTOR_ELT(lot, 0))[0];
+    }
     if (VECTOR_ELT(lot, 1) != R_NilValue) {
       SG_lotSize = INTEGER(VECTOR_ELT(lot, 1))[0];
     }
-    if (VECTOR_ELT(lot, 2) != R_NilValue) {
-      SG_lotLag          = INTEGER(VECTOR_ELT(lot, 2))[0];
-    }
-    if (VECTOR_ELT(lot, 3) != R_NilValue) {
-      SG_lotStrikeout    = INTEGER(VECTOR_ELT(lot, 3))[0];
-    }
-    if (VECTOR_ELT(lot, 4) != R_NilValue) {
-      SG_lotCutMax2         = INTEGER(VECTOR_ELT(lot, 4))[0];
-    }
-    if (VECTOR_ELT(lot, 4) != R_NilValue) {
-      SG_lotCutMax3         = INTEGER(VECTOR_ELT(lot, 5))[0];
-    }
-    if (VECTOR_ELT(lot, 5) != R_NilValue) {
-      SG_lotCutMax4         = INTEGER(VECTOR_ELT(lot, 6))[0];
+    if (INTEGER(VECTOR_ELT(lot, 2))[0] > 0) {
+      if (VECTOR_ELT(lot, 3) != R_NilValue) {
+        SG_lotLag          = INTEGER(VECTOR_ELT(lot, 3))[0];
+        if (SG_lotLag == 0) {
+          SG_lotLag = 1;
+        }
+      }
+      if (VECTOR_ELT(lot, 4) != R_NilValue) {
+        SG_lotStrikeout    = INTEGER(VECTOR_ELT(lot, 4))[0];
+      }
     }
   }
   RF_rTargetCount         = INTEGER(VECTOR_ELT(yTarget, 0))[0];

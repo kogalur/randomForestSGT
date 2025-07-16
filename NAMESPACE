@@ -4,6 +4,7 @@ useDynLib(randomForestSGT, .registration = TRUE)
 importFrom("parallel", mclapply)
 importFrom("randomForestSRC", "rfsrc")
 importFrom("stats", "runif", "as.formula", "formula", "na.omit", "model.matrix", "sd", "var")
+importFrom("stats", "rnorm", "setNames")
 importFrom("utils", "tail", "combn", "capture.output")
 importFrom("varPro", "varpro", "get.orgvimp", "get.vimp", "cv.varpro")
 

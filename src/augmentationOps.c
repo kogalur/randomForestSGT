@@ -49,7 +49,6 @@ AugmentationObj *getAugmentationObj(AugmentationObjCommon *objCommon, uint treeI
                                             NULL);
     }
   }
-  if ((hcut == 0) || (hcut >= 1)) {
     perm1 = cvector(1, hcut1Cnt);
     ll = 0;
     for (j = 1; j <= hcut1Cnt; j++) {
@@ -125,9 +124,7 @@ AugmentationObj *getAugmentationObj(AugmentationObjCommon *objCommon, uint treeI
         }
       }
     }
-  }
   perm = obj -> perm = cvector(1, hcutCnt);
-  if ((hcut == 0) || (hcut >= 1)) {
     ll = 0;
     for (j = 1; j <= hcut1Cnt; j++) {
       ll++;
@@ -162,7 +159,6 @@ AugmentationObj *getAugmentationObj(AugmentationObjCommon *objCommon, uint treeI
         }
       }
     }
-  }
   return obj;
 }
 void freeAugmentationObj(AugmentationObj *obj) {

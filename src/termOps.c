@@ -30,17 +30,17 @@ void *makeTerminalDerived(void) {
   parent -> mean = 0.0;
   parent -> ibgMembrCount = 0;
   parent -> oobMembrCount = 0;
-  parent -> allMembrSize  = 0;
+  parent -> allMembrCount = 0;
   parent -> ibgMembrIndx  = NULL;
   parent -> oobMembrIndx  = NULL;
   return parent;
 }
 void freeTerminalDerived(void *parent) {
   deinitTerminalBase((TerminalBase*) parent);
-  if (((Terminal *) parent) -> allMembrSize > 0) {
-    free_uivector(((Terminal *) parent) -> oobMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
-    free_uivector(((Terminal *) parent) -> repMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
-    free_uivector(((Terminal *) parent) -> ibgMembrIndx,  1, ((Terminal *) parent) -> allMembrSize);
+  if (((Terminal *) parent) -> allMembrCount > 0) {
+    free_uivector(((Terminal *) parent) -> oobMembrIndx,  1, ((Terminal *) parent) -> allMembrCount);
+    free_uivector(((Terminal *) parent) -> repMembrIndx,  1, ((Terminal *) parent) -> repMembrCount);
+    free_uivector(((Terminal *) parent) -> ibgMembrIndx,  1, ((Terminal *) parent) -> repMembrCount);
   }
   free_gblock(parent, (size_t) sizeof(Terminal));
 }

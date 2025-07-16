@@ -113,6 +113,14 @@ void acquireTree(char mode, uint treeID) {
       rootBase -> repMembrSize = rootBase -> repMembrSizeAlloc = bootMembrSize;
       SG_yHatAbsolute[treeID] = dvector(1, nSize);
       root -> yHatAbsolute = SG_yHatAbsolute[treeID];
+      if (RF_oobSize[treeID] > 0) {
+        rootBase -> oobMembrSizeAlloc = rootBase -> oobMembrSize = RF_oobSize[treeID];
+        rootBase -> oobMembrIndx = uivector(1, rootBase -> oobMembrSizeAlloc);
+        for (i = 1; i <= RF_oobSize[treeID]; i++) {
+          root -> yHatAbsolute[RF_oobMembershipIndex[treeID][i]] = RF_nativeNaN;
+          rootBase -> oobMembrIndx[i] = RF_oobMembershipIndex[treeID][i];
+        }
+      }
       growTreeLOT(treeID, root);
     }
     else {
@@ -190,12 +198,9 @@ char growTreeLOT (uint treeID, Node *root) {
   Node     *parent;
   NodeBase *parentBase;
   Node     *left;
-  NodeBase *leftBase;
   Node     *right;
-  NodeBase *rightBase;
-  uint *allMembrIndx;
-  uint  allMembrSize;
-  double  *yArray;
+  uint *allMembrIndx, *oobMembrIndx;
+  uint  allMembrSize,  oobMembrSize;
   double *yHatAbsolute;
   char  splitResult;
   char  result;
@@ -203,7 +208,6 @@ char growTreeLOT (uint treeID, Node *root) {
   GreedyObj *greedyBest;
   double dropBest, dropCurrent;
   LatOptTreeObj *lotObj;
-  double *eRiskOOB;
   double delta;
   char   updateFlag;
   char   growFlag;
@@ -251,7 +255,7 @@ char growTreeLOT (uint treeID, Node *root) {
       }
     }
   }
-  lotObj = makeLatOptTreeObj(SG_lotLag);
+  lotObj = makeLatOptTreeObj(SG_lotLag, SG_lotStrikeout);
   if ( (hcut >= 1) &&
        !(root -> hcut >= 1) &&
        !(SG_optLocal & ((SG_OPT_SWTCH_TWO) | (SG_OPT_SWTCH_THREE) | (SG_OPT_SWTCH_FOUR) | (SG_OPT_SWTCH_FIVE) | (SG_OPT_SWTCH_SIX))) ) {
@@ -344,59 +348,57 @@ char growTreeLOT (uint treeID, Node *root) {
                              RF_nodeMembership[treeID]);
       if (result == TRUE) {
         parent = greedyBest -> parent;
+        parentBase = (NodeBase*) parent;
         left   = (Node *)  (((NodeBase *) parent) -> left);
         right  = (Node *)  (((NodeBase *) parent) -> right);
-        leftBase   = (NodeBase *) left;
-        rightBase  = (NodeBase *) right;
         (lotObj -> treeSize) ++;
-        if (RF_opt & OPT_EMPR_RISK) {        
+        if (FALSE) {
+          if ( ((NodeBase *) parent) -> depth == 0 ) {
+            if (RF_opt & OPT_EMPR_RISK) {
+              SG_emprRSKptr[treeID][(lotObj -> treeSize) - 1] = parent -> eRiskCart;            
+            }
+            parent -> outcome = OUTC_CART;                   
+            left -> hcut = 0;
+            right -> hcut = 0;
+            left -> outcome = OUTC_CART;
+            right -> outcome = OUTC_CART;
+          }
+        }
+        if (RF_opt & OPT_EMPR_RISK) {
           double parentRisk, leftRisk, rightRisk;
+          double parentRiskOOB, leftRiskOOB, rightRiskOOB;
           if (parent -> outcome == OUTC_LASSO) {
             parentRisk = parent -> eRisk;
+            parentRiskOOB = parent -> eRiskOOB;
           }
           else {
             parentRisk = parent -> eRiskCart;
+            parentRiskOOB = parent -> eRiskCartOOB;
           }
           if (left -> outcome == OUTC_LASSO) {
             leftRisk = left -> eRisk;
+            leftRiskOOB = left -> eRiskOOB;
           }
           else {
             leftRisk = left -> eRiskCart;
+            leftRiskOOB = left -> eRiskCartOOB;
           }
           if (right -> outcome == OUTC_LASSO) {
             rightRisk = right -> eRisk;
+            rightRiskOOB = right -> eRiskOOB;
           }
           else {
             rightRisk = right -> eRiskCart;
+            rightRiskOOB = right -> eRiskCartOOB;
           }
-          if (RF_opt & OPT_EMPR_RISK) {          
-            SG_emprRSKptr[treeID][lotObj -> treeSize] = SG_emprRSKptr[treeID][(lotObj -> treeSize) - 1] 
-              - parentRisk + leftRisk + rightRisk;
-          }
-          yArray = parent -> augm -> common -> yArray;
-          yHatAbsolute = parent -> yHatAbsolute;
-          allMembrIndx = leftBase -> allMembrIndx;
-          allMembrSize = leftBase -> allMembrSize;
-          eRiskOOB = & (left -> eRiskOOB);
-          *eRiskOOB = 0.0;
-          for (i = 1; i <= allMembrSize; i++) {
-            if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
-              *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
-            }
-          }
-          allMembrIndx = rightBase -> allMembrIndx;
-          allMembrSize = rightBase -> allMembrSize;
-          eRiskOOB = & (right -> eRiskOOB);
-          *eRiskOOB = 0.0;
-          for (i = 1; i <= allMembrSize; i++) {
-            if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
-              *eRiskOOB += pow (yArray[allMembrIndx[i]] - yHatAbsolute[allMembrIndx[i]], 2.0);
-            }
-          }
-          if (RF_opt & OPT_EMPR_RISK) {
-            SG_oobEmprRSKptr[treeID][lotObj -> treeSize] = SG_oobEmprRSKptr[treeID][(lotObj -> treeSize) - 1] 
-              - (parent -> eRiskOOB) + (left -> eRiskOOB) + (right -> eRiskOOB);
-          }
+          SG_emprRSKptr[treeID][lotObj -> treeSize] = SG_emprRSKptr[treeID][(lotObj -> treeSize) - 1] 
+            - parentRisk + leftRisk + rightRisk;
+          SG_oobEmprRSKptr[treeID][lotObj -> treeSize] = SG_oobEmprRSKptr[treeID][(lotObj -> treeSize) - 1] 
+            - parentRiskOOB + leftRiskOOB + rightRiskOOB;
+          SG_cart_emprRSKptr[treeID][lotObj -> treeSize] = SG_cart_emprRSKptr[treeID][(lotObj -> treeSize) - 1] 
+            - (parent -> eRiskCart) + (left -> eRiskCart) + (right -> eRiskCart);
+          SG_cart_oobEmprRSKptr[treeID][lotObj -> treeSize] = SG_cart_oobEmprRSKptr[treeID][(lotObj -> treeSize) - 1] 
+            - (parent -> eRiskCartOOB) + (left -> eRiskCartOOB) + (right -> eRiskCartOOB);
           insertRisk(treeID, lotObj, SG_oobEmprRSKptr[treeID][lotObj -> treeSize]);
         }
         GreedyObj *greedyNakedLeft  = makeGreedyObj(left,  greedyHead);
@@ -428,8 +430,10 @@ char growTreeLOT (uint treeID, Node *root) {
     else {
       growFlag = FALSE;
     }
-    if (lotObj -> strikeout >= SG_lotStrikeout) {
-      growFlag = FALSE;
+    if (lotObj -> lag > 0) {
+      if (lotObj -> strikeout >= SG_lotStrikeout) {
+        growFlag = FALSE;
+      }
     }
   }  
   greedyMembr = greedyHead -> fwdLink;
@@ -460,6 +464,30 @@ char growTreeLOT (uint treeID, Node *root) {
                      RF_rFactorCount,      
                      RF_rFactorIndex,      
                      RF_rFactorSize);      
+    if (parentBase -> depth == 0) {
+      yHatAbsolute = parent -> yHatAbsolute;
+      oobMembrSize = parentBase -> oobMembrSize;
+      oobMembrIndx = parentBase -> oobMembrIndx;
+      if (root -> hcut > 0) {
+        double *beta = parent -> beta;
+        double **xArray = parent -> augm -> common -> xArray;
+        uint  hcutCnt = parent -> augm -> common -> hcutCnt;    
+        double predicted;
+        uint jj;
+        for (i = 1; i <= oobMembrSize; i++) {
+          predicted = beta[1];
+          for (jj = 1; jj <= hcutCnt; jj++) {
+            predicted = predicted + (beta[jj+1] * xArray[jj][oobMembrIndx[i]]);
+          }
+          yHatAbsolute[oobMembrIndx[i]] = predicted;
+        }
+      }
+      else {
+        for (i = 1; i <= oobMembrSize; i++) {
+          yHatAbsolute[oobMembrIndx[i]] = parent-> mean;
+        }
+      }
+    }
     calculateAllTerminalNodeOutcomes(RF_GROW, treeID, RF_leafLinkedObjTail[treeID] -> termPtr);
     greedyMembr = greedyMembr -> fwdLink;
   }
@@ -468,6 +496,10 @@ char growTreeLOT (uint treeID, Node *root) {
       SG_emprRSKptr[treeID][i] = SG_emprRSKptr[treeID][i] / RF_bootstrapSize;
       if (RF_oobSize[treeID] > 0) {
         SG_oobEmprRSKptr[treeID][i] = SG_oobEmprRSKptr[treeID][i] / RF_oobSize[treeID];
+      }
+      SG_cart_emprRSKptr[treeID][i] = SG_cart_emprRSKptr[treeID][i] / RF_bootstrapSize;
+      if (RF_oobSize[treeID] > 0) {
+        SG_cart_oobEmprRSKptr[treeID][i] = SG_cart_oobEmprRSKptr[treeID][i] / RF_oobSize[treeID];
       }
     }
   }

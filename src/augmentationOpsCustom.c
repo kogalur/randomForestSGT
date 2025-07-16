@@ -205,7 +205,6 @@ AugmentationObj *getAugmentationObjCustom(AugmentationObjCommon *objCommon, uint
                                             NULL);
     }
   }
-  if ((hcut == 0) || (hcut >= 1)) {
     perm1 = cvector(1, hcut1Cnt);
     ll = 0;
     for (j = 1; j <= hcut1Cnt; j++) {
@@ -225,9 +224,7 @@ AugmentationObj *getAugmentationObjCustom(AugmentationObjCommon *objCommon, uint
         perm2[ll] = TRUE;
       }
     }
-  }
   perm = obj -> perm = cvector(1, hcutCnt);
-  if ((hcut == 0) || (hcut >= 1)) {
     ll = 0;
     for (j = 1; j <= hcut1Cnt; j++) {
       ll++;
@@ -241,6 +238,5 @@ AugmentationObj *getAugmentationObjCustom(AugmentationObjCommon *objCommon, uint
       }
       free_cvector(perm2, 1, hcut2Cnt);
     }
-  }
   return obj;
 }

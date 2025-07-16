@@ -52,8 +52,7 @@
 
 \references{
 
- Ishwaran H. (2023).  Super greedy regression trees with coordinate descent.
-  Technical Report.  
+ Ishwaran H. (2025).  Super greedy trees.
 
 
 }

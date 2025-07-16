@@ -9,6 +9,7 @@
 #define SG_TCP_CTRL_EOF   0x05  
 #define SG_TCP_CTRL_EOD   0x06  
 #define SG_TCP_CTRL_STP   0x07  
+#define SG_TCP_CTRL_TVL   0x08  
 #define SG_SOCK_STATE_OPN  0x11
 #define SG_SOCK_STATE_LEN  0x12
 #define SG_SOCK_STATE_DTA  0x13

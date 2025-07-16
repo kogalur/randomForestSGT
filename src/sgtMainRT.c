@@ -324,6 +324,8 @@ char sgtMainRT(char mode, int seedValue) {
           uint ranChainCnt;
           SG_threadV = SG_THREADV_NTREE;
           ranChainCnt = RF_ntree;
+          ran1A = &randomChainParallelA;
+          ran1B = &randomChainParallelB;
           randomSetChainA    = &randomSetChainParallelA;
           randomSetChainB    = &randomSetChainParallelB;
           randomGetChainA    = &randomGetChainParallelA;

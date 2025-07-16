@@ -26,37 +26,37 @@ void calculateAllTerminalNodeOutcomesSGT(char mode,
                                          TerminalBase  *term) {
   Terminal         *termSuper;
   NodeBase         *termMate;
-  uint  allMembrSize;
   uint *allMembrIndx;
+  uint  allMembrCount;
   uint *oobMembrIndx;
+  uint  oobMembrCount;
   uint *repMembrIndx;
-  uint *ibgMembrIndx;
+  uint  repMembrCount;
   uint  i;
   termSuper = (Terminal *) term;
   termMate  = term -> mate;
   term -> membrCount = termMate -> repMembrSize;
-  termSuper -> repMembrCount = termMate -> repMembrSize;
-  allMembrSize = termMate -> allMembrSize;
+  repMembrCount = termSuper -> repMembrCount = termMate -> repMembrSize;
+  oobMembrCount = termSuper -> oobMembrCount = termMate -> oobMembrSize;
   allMembrIndx = termMate -> allMembrIndx;
-  termSuper -> allMembrSize = allMembrSize;
-  termSuper -> oobMembrCount = 0;
+  oobMembrIndx = termMate -> oobMembrIndx;
+  repMembrIndx = termMate -> repMembrIndx;
   termSuper -> ibgMembrCount = 0;
-  termSuper -> oobMembrIndx = uivector(1, allMembrSize);
-  termSuper -> repMembrIndx = uivector(1, allMembrSize);
-  termSuper -> ibgMembrIndx = uivector(1, allMembrSize);
-  oobMembrIndx = termSuper -> oobMembrIndx;
-  repMembrIndx = termSuper -> repMembrIndx;
-  ibgMembrIndx = termSuper -> ibgMembrIndx;
-  for (i = 1; i <= allMembrSize; i++) {
-    if (RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {
-      oobMembrIndx[++ (termSuper -> oobMembrCount)] = allMembrIndx[i];
-    }
-    else {
-      ibgMembrIndx[++ (termSuper -> ibgMembrCount)] = allMembrIndx[i];
-    }
+  allMembrCount = termSuper -> allMembrCount = termMate -> allMembrSize;
+  termSuper -> repMembrIndx = uivector(1, repMembrCount);
+  termSuper -> oobMembrIndx = uivector(1, allMembrCount);
+  termSuper -> ibgMembrIndx = uivector(1, repMembrCount);
+  for (i = 1; i <= oobMembrCount; i++) {
+    termSuper -> oobMembrIndx[i] = oobMembrIndx[i];
   }
-  for (i = 1; i <= termSuper -> repMembrCount; i++) {
-    repMembrIndx[i] = termMate -> repMembrIndx[i];
+  for (i = 1; i <= repMembrCount; i++) {
+    termSuper -> repMembrIndx[i] = repMembrIndx[i];
+  }
+  for (i = 1; i <= allMembrCount; i++) {
+    if (!RF_oobMembershipFlag[treeID][allMembrIndx[i]]) {  
+      (termSuper -> ibgMembrCount) ++;
+      termSuper -> ibgMembrIndx[ (termSuper -> ibgMembrCount) ] = allMembrIndx[i];
+    }
   }
   calculateMeanResponseCDL(treeID, termSuper);
 }
@@ -88,7 +88,7 @@ void calculateMeanResponseCDL(uint treeID, Terminal *term) {
   }
 }
 void updateEnsembleMeanCDL(char mode, uint treeID) {
-  char oobFlag, fullFlag, outcomeFlag;
+  char oobFlag, fullFlag;
   uint    *membershipIndex;
   uint     membershipSize;
   double    **ensembleRGRnum;
@@ -120,7 +120,6 @@ void updateEnsembleMeanCDL(char mode, uint treeID) {
     }
     break;
   }
-  outcomeFlag = TRUE;
   while ((oobFlag == TRUE) || (fullFlag == TRUE)) {
     if (oobFlag == TRUE) {
       ensembleRGRnum = SG_cdl_oobEnsembleRGRnum;
@@ -163,9 +162,6 @@ void updateEnsembleMeanCDL(char mode, uint treeID) {
 #endif
       }
     }  
-    if (outcomeFlag == TRUE) {
-      outcomeFlag = FALSE;
-    }
     if (oobFlag == TRUE) {
       oobFlag = FALSE;
     }

@@ -21,13 +21,13 @@ struct greedyObj {
 };
 typedef struct lotObj LatOptTreeObj;
 struct lotObj {
-  uint firstIn;
-  uint lastIn;
-  uint size;
+  char tune;
   uint strikeout;
   uint lag;
   double *risk;
-  uint riskSize;
+  uint size;
+  uint firstIn;
+  uint lastIn;
   double firstOD;
   uint treeSize;
 };

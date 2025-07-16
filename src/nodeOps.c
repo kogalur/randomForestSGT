@@ -24,12 +24,14 @@ void *makeNodeDerived(uint xSize) {
   initNodeBase((NodeBase*) parent, xSize);
   parent -> nSize = 0;
   parent -> augm = NULL;
-  parent -> eRisk     = RF_nativeNaN;
+  parent -> eRisk        = RF_nativeNaN;
+  parent -> eRiskCart    = RF_nativeNaN;
+  parent -> eRiskOOB     = RF_nativeNaN;
+  parent -> eRiskCartOOB = RF_nativeNaN;
   parent -> beta  = NULL;
   parent -> yHatAbsolute = NULL;
   parent -> yHatAbsoluteLasso = NULL;
   parent -> yHatAbsoluteCart = NULL;
-  parent -> eRiskCart  = RF_nativeNaN;
   parent -> mean = RF_nativeNaN;
   parent -> hcut = 0;
   parent -> outcome = 0;

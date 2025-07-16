@@ -1,11 +1,11 @@
 rfsgt.workhorse <- function(formula,
                             data,
-                            ntree = 100,
+                            ntree = if (hcut == 0) 500 else 100,
                             hcut = 1,
                             treesize = NULL,
-                            tune.treesize = FALSE,
                             nodesize = NULL,
                             filter = TRUE,
+                            bsf = NULL,
                             keep.only = NULL,
                             fast = TRUE,
                             pure.lasso = FALSE,
@@ -76,9 +76,6 @@ rfsgt.workhorse <- function(formula,
   ## filtering is switched off and we build the augmented x here
   if (inherits(filter, "tune.hcut")) {
     hcut <- attr(filter, "hcut")
-    if (!is.null(attr(filter, "pure.lasso"))) {
-      pure.lasso <- attr(filter, "pure.lasso")
-    }
     baselearnerO <- filter.baselearner(xvar, filter)
     xvar <- baselearnerO$x[, baselearnerO$xvar.names, drop = FALSE]
     hcutCnt <- ncol(xvar)
@@ -137,17 +134,16 @@ rfsgt.workhorse <- function(formula,
       augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
     }
   }
-  ## pure lasso?
+  ## pure lasso details
   if (pure.lasso && hcut>0) {
     dots$experimental.bits <- as.integer(0)
   }
-  experimental.bits <- as.integer(get.experimental.bits(dots$experimental.bits, hcut))
+  experimental.bits <- as.integer(get.experimental.bits(dots$experimental.bits, bsf, hcut))
   ## tree grow options
   mtry <- get.mtry(family, n.xvar, dots$mtry)
   nodesize <- get.nodesize(family, nodesize)    
   lot <- get.lot(hcut=hcut,
                  treesize=treesize,
-                 tune=tune.treesize,
                  lag=dots$lag,
                  strikeout=dots$strikeout,
                  max.two=dots$max.two,
@@ -378,7 +374,7 @@ rfsgt.workhorse <- function(formula,
   colnames(nativeArray) <- c("treeID", "nodeID", "nodeSZ", "brnodeID",
                              "betaZ", as.character(1:hcutCnt), "yStar", "yBar", "prnodeID")
   ## save the lot 
-  lot <- c(lot, lasso=lasso, experimental.bits=experimental.bits, tune=tune.treesize)
+  lot <- c(lot, lasso=lasso, experimental.bits=experimental.bits)
   forest.out  <- list(forest = TRUE,
                       ntree = ntree,
                       n = n,
@@ -399,10 +395,12 @@ rfsgt.workhorse <- function(formula,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
                       ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
-                      version = "0.0.1.63")
+                      version = "0.0.1.74")
   empr.risk <- NULL
   oob.empr.risk <- NULL
-  nodeStat <- NULL
+  empr.risk.cart <- NULL
+  oob.empr.risk.cart <- NULL
+    nodeStat <- NULL
   if (!is.null(nativeOutput$bsfOrder)) {
     bsf.order <- nativeOutput$bsfOrder
     nativeOutput$bsfOrder <- NULL
@@ -415,6 +413,14 @@ rfsgt.workhorse <- function(formula,
     if (!is.null(nativeOutput$oobEmprRisk)) {
       oob.empr.risk <- array(nativeOutput$oobEmprRisk, c(lot$treesize, ntree))
       nativeOutput$oobEmprRisk <- NULL
+    }
+    if (!is.null(nativeOutput$emprRiskCart)) {
+      empr.risk.cart <- array(nativeOutput$emprRiskCart, c(lot$treesize, ntree))
+      nativeOutput$emprRiskCart <- NULL
+    }
+    if (!is.null(nativeOutput$oobEmprRiskCart)) {
+      oob.empr.risk.cart <- array(nativeOutput$oobEmprRiskCart, c(lot$treesize, ntree))
+      nativeOutput$oobEmprRiskCart <- NULL
     }
     if (!is.null(nativeOutput$nodeStat)) {
       nodeStat <- array(nativeOutput$nodeStat, c(lot$treesize, ntree))
@@ -466,6 +472,8 @@ rfsgt.workhorse <- function(formula,
     nodeStat = nodeStat,
     empr.risk = empr.risk,
     oob.empr.risk = oob.empr.risk,
+    empr.risk.cart = empr.risk.cart,
+    oob.empr.risk.cart = oob.empr.risk.cart,
     bsf.order = bsf.order,
     predicted = predicted,
     predicted.oob = predicted.oob,

@@ -1,12 +1,5 @@
 \name{rfsgt}
 \alias{rfsgt}
-\alias{filter.rfsgt}
-\alias{filter.custom.rfsgt}
-\alias{get.beta}
-\alias{tune.hcut}
-\alias{use.tune.hcut}
-\alias{vimp.rfsgt}
-\alias{make.baselearner}
 \title{Random Forest Super Greedy Trees}
 \description{
   Grow a forest of Super Greedy Trees (SGTs) using lasso.
@@ -15,12 +8,12 @@
 \usage{
 rfsgt(formula,
       data,
-      ntree = 100,
+      ntree = if (hcut == 0) 500 else 100,
       hcut = 1,
       treesize = NULL,
       nodesize = NULL,
-      tune.treesize = FALSE,
       filter = (hcut > 1),
+      bsf = if (hcut > 0) "oob" else NULL,
       keep.only = NULL,
       fast = TRUE,
       pure.lasso = FALSE,
@@ -47,24 +40,23 @@ rfsgt(formula,
   \item{hcut}{Integer value indexing type of parametric regression model
     to use for splitting.  See details below.}
 
-  \item{treesize}{Function specifying size of tree (number of terminal
-    nodes) where first input is \code{n} sample size and second input is
-    \code{hcut}.  Can also be supplied as an integer value and defaults
-    to an internal function if unspecified.  If
-    \code{tune.treesize}=TRUE, this is the maximum number of allowable
-    splits.  If \code{tune.treesize}=FALSE, this is the target number of
-    tree splits.}
+  \item{treesize}{Function specifying upper bound for size of tree
+    (number of terminal nodes) where first input is \code{n} sample size
+    and second input is \code{hcut}.  Can also be supplied as an integer
+    value and defaults to an internal function if unspecified.}
 
   \item{nodesize}{Minumum size of terminal node.  Set internally if
     not specified.}
 
-  \item{tune.treesize}{Adaptively determine the optimal tree size using
-    out-of-bag empirical risk?}
-    
   \item{filter}{Logical value specifying whether dimension reduction
     (filtering) of features should be performed.Can also be specified
     using the helper function \code{tune.hcut} which performs dimension
     reduction prior to fitting.  See examples below.}
+
+  \item{bsf}{Best split first (BSF) empirical risk minimization
+    strategy. When lasso is enabled (\code{hcut}>0), using OOB
+    (out-of-bag) improves robustness and is the default. However, this
+    can optimistically bias OOB error estimates.}
 
   \item{keep.only}{Character vector specifying the features of interest.
   The data is pre-filtered to keep only these requested variables.
@@ -173,8 +165,7 @@ rfsgt(formula,
 
 \references{
   
-  Ishwaran H. (2023).  Super greedy regression trees with coordinate descent.
-  Technical Report.  
+  Ishwaran H. (2025).  Super greedy trees.
   
 }
 
@@ -228,7 +219,7 @@ Boston$nox <- factor(round(20 * Boston$nox))
 Boston$rm <- factor(round(Boston$rm))
      
 ## random forest: hcut=0 
-print(rfsgt(medv~., Boston, hcut=0, nodesize=1, ntree=500))
+print(rfsgt(medv~., Boston, hcut=0, nodesize=1))
 
 ## hcut=3
 print(rfsgt(medv~., Boston, hcut=3))
@@ -243,7 +234,7 @@ print(rfsgt(medv~., Boston, hcut=3))
 ## load the data
 data(Ozone, package = "mlbench")
 
-print(rfsgt(V4~., na.omit(Ozone), hcut=0, nodesize=1, ntree=500))
+print(rfsgt(V4~., na.omit(Ozone), hcut=0, nodesize=1))
 print(rfsgt(V4~., na.omit(Ozone), hcut=1))
 print(rfsgt(V4~., na.omit(Ozone), hcut=2))
 print(rfsgt(V4~., na.omit(Ozone), hcut=3))
@@ -283,7 +274,7 @@ nl2d.tst <- data.frame(y = fx.tst, x.tst)
 rO <- lapply(0:4, function(hcut) {
   cat("hcut", hcut, "\n")
   rfsgt(y~., nl2d, ntree=1, hcut=hcut, treesize=treesize, bootstrap="none",
-         tune.treesize=TRUE, nodesize=1, strikeout=10000, filter=FALSE)
+         nodesize=1, filter=FALSE)
 })
 
 ## nice little wrapper for plotting results
@@ -331,7 +322,6 @@ if (library("interp", logical.return = TRUE)) {
 ## ------------------------------------------------------------
 ##
 ##  friedman illustration of OOB empirical risk
-##  (note: tune.treesize=TRUE required to obtain empirical risk)
 ##
 ## ------------------------------------------------------------
 
@@ -340,8 +330,8 @@ n <- 500
 dta <- data.frame(mlbench:::mlbench.friedman1(n, sd=0))
 
 ## rf versus rfsgt
-o1 <- rfsgt(y~., dta, hcut=0, tune.treesize=TRUE, block.size=1)
-o2 <- rfsgt(y~., dta, hcut=3, tune.treesize=TRUE, block.size=1)
+o1 <- rfsgt(y~., dta, hcut=0, block.size=1)
+o2 <- rfsgt(y~., dta, hcut=3, block.size=1)
 
 ## compute running average of OOB empirical risk
 runavg <- function(x, lag = 8) {
@@ -402,7 +392,7 @@ sim <- list(
 ## run rfsgt on the simulations
 n <- 500
 max.hcut <- 3
-results <- lapply(names(sim), function(nm) {
+results <- setNames(lapply(names(sim), function(nm) {
   cat("simulation:", nm, "\n")
   d <- sim[[nm]](n=n)
   rO <- data.frame(do.call(rbind, lapply(0:max.hcut, function(hcut) {
@@ -412,11 +402,27 @@ results <- lapply(names(sim), function(nm) {
   })))
   colnames(rO) <- c("hcut", "mse", "smse")
   rO
-})
-names(results) <- names(sim)
+}), names(sim))
 
 ## print results
 print(results)
+
+
+## ------------------------------------------------------------
+##
+## synthetic regression example showing how to tune hcut
+##
+## ------------------------------------------------------------
+
+hcut.opt <- setNames(sapply(names(sim), function(nm) {
+  cat("optimize hcut for simulation:", nm, "\n")
+  f <- tune.hcut(y~., sim[[nm]](n=n), hcut=4)
+  attr(f, "hcut")
+}), names(sim))
+
+## print the optimal hcut
+print(hcut.opt)
+
 
 ## ------------------------------------------------------------
 ##
@@ -449,7 +455,8 @@ d <- data.frame(y = rnorm(n), x = matrix(rnorm(n * p), n))
 
 ## we have a big p small n pure noise setting: let's see how well we do
 cat("variables selected by vimp.rfsgt:\n")
-print(sort(vimp.rfsgt(y~.,d)))
+vmp <- sort(vimp.rfsgt(y~.,d))
+print(vmp[vmp > .05])
 
 ## internal filtering function can also be used
 cat("variables selected by filter.rfsgt:\n")

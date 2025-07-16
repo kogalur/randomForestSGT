@@ -7,8 +7,9 @@ struct node {
   struct augmentationObj *augm;
   unsigned int nSize;
   double eRisk;
-  double eRiskCart;
   double eRiskOOB;
+  double eRiskCart;
+  double eRiskCartOOB;
   double *beta;
   double *yHatAbsolute;
   double *yHatAbsoluteLasso;

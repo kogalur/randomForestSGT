@@ -59,8 +59,14 @@ void freeGreedyObjList(GreedyObj *gObj) {
   }
   freeGreedyObj(gObj);
 }
-LatOptTreeObj *makeLatOptTreeObj(uint lag) {
+LatOptTreeObj *makeLatOptTreeObj(uint lag, uint strikeout) {
   LatOptTreeObj *lotObj = (LatOptTreeObj*) gblock((size_t) sizeof(LatOptTreeObj));
+  if (strikeout > 0) {
+    lotObj -> tune = TRUE;
+  }
+  else {
+    lotObj -> tune = FALSE;
+  }
   lotObj -> lag = lag;
   lotObj -> risk  = dvector(1, lag + 1);
   for (uint i = 1; i <= lag; i++) {
@@ -80,7 +86,7 @@ void freeLatOptTreeObj(LatOptTreeObj *lotObj) {
 }
 void insertRisk(uint treeID, LatOptTreeObj *obj, double value) {
   double normalizedValue;
-  if (obj -> lag > 0) {
+  if (obj -> tune) {
     normalizedValue = value / (obj -> lag);
     if (obj -> size < (obj -> lag)) {
       if (obj -> size == 0) {

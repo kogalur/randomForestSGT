@@ -4,7 +4,7 @@
 GreedyObj *makeGreedyObj(Node *parent, GreedyObj *head);
 void freeGreedyObj(GreedyObj *gObj);
 void freeGreedyObjList(GreedyObj *gObj);
-LatOptTreeObj *makeLatOptTreeObj(uint lag);
+LatOptTreeObj *makeLatOptTreeObj(uint lag, uint strikout);
 void freeLatOptTreeObj(LatOptTreeObj *lotObj);
 void insertRisk(uint treeID, LatOptTreeObj *obj, double value);
 #endif

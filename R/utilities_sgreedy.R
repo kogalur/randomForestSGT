@@ -27,7 +27,6 @@
 ### This is not mutually exclusive of the other experimental bits.
 ###
 ###  experimental.bits = 2^7
-###
 ###  When this bit is low, we check the betas at lambdaMinIndx, and
 ###  ensure they are not all zero.  If they are zero we fail the
 ###  master, otherwise we indicate success and use lambdaMinIndx as
@@ -36,24 +35,46 @@
 ###  lambda1SEIndxMin.  If the betas at this back-up value are
 ###  non-zero, we indicate success and use lambda1SEIndxMin as the
 ###  target.  Otherwise, if both checks fail, we fail the master.
+###
+###  experimental.bits = 2^8
+###  When this bit is high, we use the OOB emperical risk in place of
+###  the in-bag for determining tree growth.  Note that the split rule
+###  always uses the in-bag subset, but in terms of best split first,
+###  and all the eBits 2^2, ... 2^6, we use the OOB subset.
+###
 ##########################################################################
-get.experimental.bits  <- function(experimental.bits, hcut) {
+get.experimental.bits  <- function(experimental.bits, bsf, hcut) {
   if (!is.null(experimental.bits)) {
     ## zero --> 2^7
     if (experimental.bits == 0) {##pure lasso+lambda1SEIndxMin
-      as.integer(2^7)
+        result <- 2^7
     }
     experimental.bits
   }
   else {
     if (hcut < 2) {
-      2^6 + 2^3
+      result <- 2^6 + 2^3
     }
     else {
       #2^6 + 2^4#doesn't seem to be any advantage and reduces % lasso split
-      2^4
+      result <- 2^4
     }
   }
+  if (!is.null(bsf)) {
+    if (bsf == "ibg") {
+      # no change
+    }
+    else if (bsf == "oob") {
+      result <- result + 2^8
+    }
+    else {
+      # no change
+    }
+  }
+  else {
+     # no change
+  }
+  return (result)
 }
 get.lasso <- function(user.option, n, n.xvar) {
   if (is.null(user.option$nlambda)) {
@@ -101,34 +122,23 @@ get.lasso <- function(user.option, n, n.xvar) {
 }
 get.lot <- function(hcut = 1,
                     treesize = NULL,
-                    tune = TRUE,
                     lag = NULL,
                     strikeout = NULL,
                     max.two   = NULL,
                     max.three = NULL,
                     max.four  = NULL) {
   if (is.null(treesize) || (!is.function(treesize) && !is.numeric(treesize))) {
-    if (tune) {
-      treesize <- function(n, hcut) {
-        if (hcut > 1) {
-          min(100, n / 5)
-        }
-        else {
-          max(100, n / 5)
-        }
-      }
-    }
-    else {
-      treesize <- function(n, hcut) {
-        maxsize <- 1000
+    treesize <- function(n, hcut) {
+      maxsize <- 1000
+      if (hcut < 2) {
         min(maxsize, max(200, n / 5))
+      }
+      else {
+        min(100, n/5)
       }
     }
   }
   if (is.null(lag)) {
-    lag <- 50
-  }
-  if (tune == FALSE) {
     lag <- 0
   }
   if (is.null(strikeout)) {
@@ -430,4 +440,10 @@ make.baselearner <- function (x,
   }
   ## return the modified finalized x matrix - ie. the base learner matrix
   xmod
+}
+get.baselearner.dim <- function(p = 5, hcut.max = 5, ...) {
+  x <- data.frame(matrix(rnorm(100 * p), ncol = p))
+  setNames(sapply(1:hcut.max, function(h) {
+    ncol(make.baselearner(x, hcut = h, ...))
+  }), 1:hcut.max)
 }

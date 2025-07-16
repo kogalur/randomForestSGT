@@ -24,7 +24,7 @@ char  *SG_sexpStringOutgoingCDL[11] = {
   "lambdaMeanErr",    
   "lambdaCVSD"        
 };
-char  *SG_sexpStringOutgoing[33] = {
+char  *SG_sexpStringOutgoing[SG_SEXP_SIZE] = {
   "cTimeInternal",  
   "nodeMembership", 
   "bootstrapCount", 
@@ -38,8 +38,6 @@ char  *SG_sexpStringOutgoing[33] = {
   "perfRegr",       
   "leafCount",      
   "seed",           
-  "emprRisk",       
-  "oobEmprRisk",    
   "nodeStat",       
   "treeID",         
   "nodeID",         
@@ -56,6 +54,17 @@ char  *SG_sexpStringOutgoing[33] = {
   "ombrIdent",      
   "ambrOffset",     
   "prnodeID",       
+  " ",              
+  " ",              
+  " ",              
+  "emprRisk",         
+  "oobEmprRisk",      
+  "emprRiskCart",     
+  "oobEmprRiskCart",  
+  " ",                
+  " ",                
+  " ",                
+  " ",                
   "optLoGrow",      
   "optHiGrow"       
 };

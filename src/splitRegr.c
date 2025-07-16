@@ -30,8 +30,8 @@ char virtuallySplitNodeGreedyCart (uint       treeID,
                                    uint   *leftSize) {
   Node     *parent;
   NodeBase *baseParent;
-  uint  repMembrSize;
-  uint *repMembrIndx;
+  uint  repMembrSize,  oobMembrSize;
+  uint *repMembrIndx, *oobMembrIndx;
   uint     xvarID;
   uint     xvarCount;
   double  *splitVector;
@@ -56,6 +56,8 @@ char virtuallySplitNodeGreedyCart (uint       treeID,
   AugmentationObjCommon *augmObjCommon = parent -> augm -> common;  
   repMembrSize = baseParent -> repMembrSize;
   repMembrIndx = baseParent -> repMembrIndx;
+  oobMembrSize = baseParent -> oobMembrSize;
+  oobMembrIndx = baseParent -> oobMembrIndx;
   yArray = augmObjCommon -> yArray;
   xArray = augmObjCommon -> xArray;
   splitVector = dvector(1, repMembrSize);
@@ -248,6 +250,48 @@ char virtuallySplitNodeGreedyCart (uint       treeID,
     }
     baseLeft  -> repMembrSize = *leftSize;
     baseRight -> repMembrSize =  rghtSize;
+    if (oobMembrSize > 0) {
+    baseLeft ->  oobMembrIndx  = uivector(1, oobMembrSize);
+    baseRight -> oobMembrIndx  = uivector(1, oobMembrSize);
+    baseLeft  -> oobMembrSizeAlloc = oobMembrSize;
+    baseRight -> oobMembrSizeAlloc = oobMembrSize;  
+    uint leftSizeOOB  = 0;
+    uint rightSizeOOB = 0;
+    observation = xArray[infoMax -> splitParameter];
+    if (infoMax -> splitValueFactSize > 0) {
+      for (i = 1; i <= oobMembrSize; i++) {
+        daughterFlag = splitOnFactor((uint)  observation[oobMembrIndx[i]], infoMax -> splitValueFactPtr);
+        if (daughterFlag == LEFT) {
+          (leftSizeOOB) ++;
+          baseLeft -> oobMembrIndx[leftSizeOOB] = oobMembrIndx[i];
+        }
+        else {
+          rightSizeOOB ++;
+          baseRight -> oobMembrIndx[rightSizeOOB] = oobMembrIndx[i];
+        }
+      }
+    }
+    else {
+      for (i = 1; i <= oobMembrSize; i++) {
+        if ( (infoMax -> splitValueCont - observation[oobMembrIndx[i]]) >= 0.0) {
+          daughterFlag = LEFT;
+        }
+        else {
+          daughterFlag = RIGHT;
+        }
+        if (daughterFlag == LEFT) {
+          (leftSizeOOB) ++;
+          baseLeft -> oobMembrIndx[leftSizeOOB] = oobMembrIndx[i];
+        }
+        else {
+          rightSizeOOB ++;
+          baseRight -> oobMembrIndx[rightSizeOOB] = oobMembrIndx[i];
+        }
+      }
+    }
+    baseLeft  -> oobMembrSize = leftSizeOOB;
+    baseRight -> oobMembrSize = rightSizeOOB;
+    }
     for (k = 1; k <= baseParent -> xSize; k++) {
       baseLeft -> permissible[k] = baseRight -> permissible[k] = baseParent -> permissible[k];
     }
@@ -264,8 +308,8 @@ char virtuallySplitNodeGreedyCart (uint       treeID,
 }
 void initializeBetaAndPredictedCart(uint treeID, Node *parent) {
   double  *yArray;
-  uint *repMembrIndx;
-  uint  repMembrSize;
+  uint *repMembrIndx, *oobMembrIndx;
+  uint  repMembrSize,  oobMembrSize;
   uint  hcutCnt;
   double **beta;
   double  *yHatAbsoluteCart;
@@ -276,6 +320,8 @@ void initializeBetaAndPredictedCart(uint treeID, Node *parent) {
   yArray = parent -> augm -> common -> yArray;
   repMembrIndx = ((NodeBase *) parent) -> repMembrIndx;
   repMembrSize = ((NodeBase *) parent) -> repMembrSize;
+  oobMembrIndx = ((NodeBase *) parent) -> oobMembrIndx;
+  oobMembrSize = ((NodeBase *) parent) -> oobMembrSize;
   beta = & (parent -> beta);
   yHatAbsoluteCart = parent -> yHatAbsoluteCart;
   *beta = dvector(1, hcutCnt + 1);
@@ -296,6 +342,12 @@ void initializeBetaAndPredictedCart(uint treeID, Node *parent) {
   *eRiskPtr = 0.0;
   for (i = 1; i <= repMembrSize; i++) {
     *eRiskPtr += pow (yArray[repMembrIndx[i]] - localMean, 2.0);
+  }
+  eRiskPtr = & (parent -> eRiskCartOOB);
+  *eRiskPtr = 0.0;
+  for (i = 1; i <= oobMembrSize; i++) {
+    *eRiskPtr += pow (yArray[oobMembrIndx[i]] - localMean, 2.0);
+    yHatAbsoluteCart[oobMembrIndx[i]] = localMean;
   }
 }
 DistributionObj *stackRandomCovariatesSimple(uint treeID, NodeBase *parent, uint mtry) {

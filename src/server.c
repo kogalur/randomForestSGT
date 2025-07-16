@@ -194,7 +194,12 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
               }
               else {
                 if (result != currDO -> len) {
-                  RF_nativeError("\nRF-SRC:  *** USER FORCED ABORT *** ");  RF_nativeExit();
+                  RF_nativeError("\nRF-SRC:  *** ERROR *** ");
+                  RF_nativeError("\nRF-SRC:  Message received was not of expected length:  %10d versus %10d", currDO -> len, result);
+                  RF_nativeError("\nRF-SRC:  Additional error handling and redundancy required.");
+                  RF_nativeError("\nRF-SRC:  Please contact technical support.");
+                  RF_nativeError("\nRF-SRC:  The application will now exit.");
+                  RF_nativeExit();
                 }
                 currDO -> socketState = SG_SOCK_STATE_DTA;
                 currDO -> record[currDO -> len] = 0x00;
@@ -254,12 +259,20 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
                     ctrlID = SG_TCP_CTRL_NAK;
                   }
                 }
+                else if (currDO -> record[0] == SG_TCP_CTRL_TVL) {
+                  if (currDO -> userState == SG_DESC_WRITING) {
+                    ctrlID = currDO -> userState;
+                  }
+                  else {
+                    ctrlID = SG_TCP_CTRL_NAK;
+                  }
+                }
                 else {
                 }
-                  result = serverSend(listen_i, &ctrlID, 1);
-                  if (result < 0) {
-                    closeConn = TRUE;
-                  }
+                result = serverSend(listen_i, &ctrlID, 1);
+                if (result < 0) {
+                  closeConn = TRUE;
+                }
                 if (((currDO -> record[0] == SG_TCP_CTRL_TSZ) && ((currDO -> userState) == SG_DESC_POSTPREDICTING))) {
                     hboLength = currDO -> nSize;
                     nboLength = htons(hboLength);
@@ -269,21 +282,26 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
                     else if (result == 0) {
                     }
                     else if (result == sizeof(uint16_t)) {
-                      currDO -> userState = SG_DESC_PREWRITING;
+                      currDO -> userState = SG_DESC_WRITING;
                     }
                     else {
                     }
                 }
-                else if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_PREWRITING))) {
-                  currDO -> userState = SG_DESC_WRITING;
-                }
-                else if (((currDO -> record[0] == SG_TCP_CTRL_QRY) && ((currDO -> userState) == SG_DESC_WRITING))) {
+                else if (((currDO -> record[0] == SG_TCP_CTRL_TVL) && ((currDO -> userState) == SG_DESC_WRITING))) {
                   (currDO -> nSent) ++;
                   nbo_recordID = htonl(currDO -> nIndx[currDO -> nSent]);
                   currDO -> yHatPacket -> recordID = nbo_recordID;
                   hbo_fltValue = (float) currDO -> yHat[currDO -> nSent];
                   currDO -> yHatPacket -> intValue = htonl(*hbo_intValuePtr);
-                  send(listen_i, (char *) (currDO -> yHatPacket), sizeof(currDO -> yHatPacket), 0);
+                  result = send(listen_i, (char *) (currDO -> yHatPacket), sizeof(PredictorPacket), 0);
+                  if (result == -1) {
+                  }
+                  else if (result == 0) {
+                  }
+                  else if (result == sizeof(PredictorPacket)) {
+                  }
+                  else {
+                  }
                   if (currDO -> nSent == currDO -> nSize) {
                     resetDescriptorObj(currDO, SG_SOCK_STATE_OPN);
                   }

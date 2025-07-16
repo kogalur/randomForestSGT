@@ -25,12 +25,7 @@ char processDefaultGrow(void) {
   else {
     RF_opt = RF_opt & (~OPT_SEED);
   }
-  if (SG_lotLag > 0) {
-    RF_opt = RF_opt | OPT_EMPR_RISK;
-  }
-  else {
-    RF_opt = RF_opt & (~OPT_EMPR_RISK);
-  }
+  RF_opt = RF_opt | OPT_EMPR_RISK;    
   if ((RF_opt & OPT_OENS) || (RF_opt & OPT_IENS)) {
   }
   else {

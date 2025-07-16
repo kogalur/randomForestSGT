@@ -65,6 +65,12 @@ char sgtMain(char mode, int seedValue) {
     RF_nativeError("\nRF-SRC:  Invalid value specified for error block count:  %10d \n", RF_perfBlock);
     result = FALSE;
   }
+  if (SG_lotSize == 0) {
+    RF_nativeError("\nRF-SRC:  *** ERROR *** ");
+    RF_nativeError("\nRF-SRC:  Parameter verification failed.");
+    RF_nativeError("\nRF-SRC:  Invalid value specified for tree size:  %10d vs %10d \n", SG_lotSize);
+    result = FALSE;
+  }
 #ifdef _OPENMP
   if (RF_numThreads < 0) {
     RF_numThreads = omp_get_max_threads();

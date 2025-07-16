@@ -36,7 +36,6 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
   obj -> fnSize = 0;
   obj -> fxArray = NULL;
   obj -> fyArray = NULL;
-  if ((hcut == 0) || (hcut >= 1)) {
     hcut1Cnt = p;
     if (hcut >= 2) {
       hcut2Cnt = p;
@@ -50,7 +49,6 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
         }
       }
     }
-  }
   permImpure = obj -> permImpure = cvector(1, p);
   for (j = 1; j <= p; j++) {
     permImpure[j] = permIn[j];    
@@ -64,7 +62,6 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
   }
   hcutCnt = hcut1Cnt + hcut2Cnt + hcut3Cnt + hcut4Cnt + hcut5Cnt;
   perm1 = perm2 = perm3 = perm4 = perm5 = NULL; 
-  if ((hcut == 0) || (hcut >= 1)) {
     perm1 = cvector(1, hcut1Cnt);
     hcut1Intr = (uint **) new_vvector(1, 1, NRUTIL_UPTR);
     hcut1Intr[1] = uivector(1, hcut1Cnt);
@@ -168,7 +165,6 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
         }
       }
     }
-  }
   obj -> hcutCnt  = hcutCnt;
   obj -> hcut1Cnt = hcut1Cnt;
   obj -> hcut2Cnt = hcut2Cnt;
@@ -181,7 +177,6 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
   obj -> hcut4Intr = hcut4Intr;
   obj -> hcut5Intr = hcut5Intr;
   hcut1Augm = hcut2Augm = hcut3Augm = hcut4Augm = hcut5Augm = NULL;
-  if ((hcut == 0) || (hcut >= 1)) {
     hcut1Augm = xArrayIn;
     if (hcut >= 2) {
       hcut2Augm = (double **) new_vvector(1, hcut2Cnt, NRUTIL_DPTR);
@@ -227,13 +222,11 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
         }
       }
     }
-  }
   obj -> hcut1Augm = hcut1Augm;
   obj -> hcut2Augm = hcut2Augm;
   obj -> hcut3Augm = hcut3Augm;
   obj -> hcut4Augm = hcut4Augm;
   obj -> hcut5Augm = hcut5Augm;
-  if ((hcut == 0) || (hcut >= 1)) {
     hcut1Augm = xArrayIn;
     if (hcut >= 2) {
       for (ll = 1; ll <= hcut2Cnt; ll++) {
@@ -271,10 +264,8 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
         }
       }
     }
-  }
   xArray = obj -> xArray = (double **) new_vvector(1, hcutCnt, NRUTIL_DPTR);
   perm = obj -> perm = cvector(1, hcutCnt);
-  if ((hcut == 0) || (hcut >= 1)) {
     ll = 0;
     for (j = 1; j <= hcut1Cnt; j++) {
       ll++;
@@ -314,7 +305,6 @@ AugmentationObjCommon *getAugmentationObjCommon(uint hcut, uint n, uint p, doubl
         }
       }
     }
-  }
   return obj;
 }
 void getAugmentationObjCommonTest(AugmentationObjCommon *obj,
@@ -352,7 +342,6 @@ void getAugmentationObjCommonTest(AugmentationObjCommon *obj,
   hcut1Augm = hcut2Augm = hcut3Augm = hcut4Augm = hcut5Augm = NULL;
   perm1 = perm2 = perm3 = perm4 = perm5 = NULL; 
   j = 0;
-  if ((hcut == 0) || (hcut >= 1)) {
     perm1 = cvector(1, hcut1Cnt);
     for (ll = 1; ll <= hcut1Cnt; ll++) {
       perm1[ll] = perm[++j];
@@ -381,8 +370,6 @@ void getAugmentationObjCommonTest(AugmentationObjCommon *obj,
         }
       }
     }
-  }
-  if ((hcut == 0) || (hcut >= 1)) {
     hcut1Augm = xArrayIn;
     if (hcut >= 2) {
       hcut2Augm = (double **) new_vvector(1, hcut2Cnt, NRUTIL_DPTR);
@@ -428,13 +415,11 @@ void getAugmentationObjCommonTest(AugmentationObjCommon *obj,
         }
       }
     }
-  }
   obj -> hcut1AugmTest = hcut1Augm;
   obj -> hcut2AugmTest = hcut2Augm;
   obj -> hcut3AugmTest = hcut3Augm;
   obj -> hcut4AugmTest = hcut4Augm;
   obj -> hcut5AugmTest = hcut5Augm;
-  if ((hcut == 0) || (hcut >= 1)) {
     hcut1Augm = xArrayIn;
     if (hcut >= 2) {
       for (ll = 1; ll <= hcut2Cnt; ll++) {
@@ -472,10 +457,8 @@ void getAugmentationObjCommonTest(AugmentationObjCommon *obj,
         }
       }
     }
-  }
   fxArray = obj -> fxArray = (double **) new_vvector(1, hcutCnt, NRUTIL_DPTR);
   xArray = fxArray;
-  if ((hcut == 0) || (hcut >= 1)) {
     ll = 0;
     for (j = 1; j <= hcut1Cnt; j++) {
       ll++;
@@ -510,7 +493,6 @@ void getAugmentationObjCommonTest(AugmentationObjCommon *obj,
         }
       }
     }
-  }
 }
 void freeAugmentationObjCommon(AugmentationObjCommon *obj) {
   uint hcut;
@@ -546,7 +528,6 @@ void freeAugmentationObjCommon(AugmentationObjCommon *obj) {
   xArray    = obj -> xArray;
   perm      = obj -> perm;
   free_cvector(permImpure, 1, pSize);
-  if ((hcut == 0) || (hcut >= 1)) {
     free_uivector(hcut1Intr[1], 1, hcut1Cnt);
     free_new_vvector(hcut1Intr, 1, 1, NRUTIL_UPTR);
     if (hcut >= 2) {
@@ -588,7 +569,6 @@ void freeAugmentationObjCommon(AugmentationObjCommon *obj) {
         }
       }
     }
-  }
   free_new_vvector(xArray, 1, hcutCnt, NRUTIL_DPTR);
   free_cvector(perm, 1, hcutCnt);
   if (obj -> fxArray != NULL) {
@@ -596,7 +576,6 @@ void freeAugmentationObjCommon(AugmentationObjCommon *obj) {
     hcut3AugmTest = obj -> hcut3AugmTest;
     hcut4AugmTest = obj -> hcut4AugmTest;
     hcut5AugmTest = obj -> hcut5AugmTest;
-    if ((hcut == 0) || (hcut >= 1)) {
       if (hcut >= 2) {
         for (ll = 1; ll <= hcut2Cnt; ll++) {
           free_dvector(hcut2AugmTest[ll], 1, nSize);
@@ -621,7 +600,6 @@ void freeAugmentationObjCommon(AugmentationObjCommon *obj) {
           }
         }
       }
-    }
     free_new_vvector(obj -> fxArray, 1, hcutCnt, NRUTIL_DPTR);
   }
   free_gblock(obj, (size_t) sizeof(AugmentationObjCommon));
@@ -645,7 +623,6 @@ void freeAugmentationObjCommonTestOnly(AugmentationObjCommon *obj) {
     hcut3AugmTest = obj -> hcut3AugmTest;
     hcut4AugmTest = obj -> hcut4AugmTest;
     hcut5AugmTest = obj -> hcut5AugmTest;
-    if ((hcut == 0) || (hcut >= 1)) {
       if (hcut >= 2) {
         for (ll = 1; ll <= hcut2Cnt; ll++) {
           free_dvector(hcut2AugmTest[ll], 1, nSize);
@@ -674,7 +651,6 @@ void freeAugmentationObjCommonTestOnly(AugmentationObjCommon *obj) {
           }
         }
       }
-    }
     free_new_vvector(obj -> fxArray, 1, hcutCnt, NRUTIL_DPTR);
     obj -> fxArray = NULL;
   }
