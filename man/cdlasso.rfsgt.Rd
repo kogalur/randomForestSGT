@@ -79,24 +79,60 @@ Use coordinate descent to fit lasso to a regression model.
 
 \value{
 
-  Lasso solution path with the following values.
+  A list containing the fitted lasso solution path.  The list contains:
 
-  \item{beta}{Matrix containing beta values for the lasso solution path.}
+  \describe{
 
-  \item{lambda}{The sequence of \code{lambda} values used.}
+    \item{\code{convgCount}}{Convergence counter returned by the
+      coordinate-descent routine.}
 
-  \item{lambda.min.indx}{Index for value of \code{lambda} that gives the
-  minimum cross-validation error.  Only applies if \code{nfolds} is
-  greater than 1.}
+    \item{\code{lambdaCount}}{Number of \code{lambda} values in the
+      fitted solution path.}
 
-  \item{lambda.1se.min.indx}{Index for minimum \code{lambda} value
-    within 1 standard error of the minimum cross-validation error. This
-    is more liberal.  Only applies if \code{nfolds} is greater than 1.}
+    \item{\code{lambda}}{The sequence of \code{lambda} values used.}
 
-  \item{lambda.1se.max.indx}{Index for maximum \code{lambda} value
-    within 1 standard error of the minimum cross-validation error. This
-    is more conservative.  Only applies if \code{nfolds} is greater than
-    1.}
+    \item{\code{beta}}{Matrix of regression coefficients for the lasso
+      solution path.  Rows correspond to values in \code{lambda}; columns
+      contain the intercept followed by the encoded predictor variables.}
+
+    \item{\code{xvar}}{Numeric predictor matrix used in the fit, after
+      any internal encoding of the supplied data.}
+
+    \item{\code{yvar}}{Response vector used in the fit.}
+
+    \item{\code{yHat}}{Cross-validated fitted values or predictions by
+      \code{lambda} and observation.  Returned only when cross-validation
+      output is available, such as when \code{nfolds} is greater than 1.}
+
+    \item{\code{lambda.min.indx}}{Index of the \code{lambda} value with
+      minimum cross-validation error.  Returned only when cross-validation
+      output is available.}
+
+    \item{\code{lambda.1se.min.indx}}{Index of the minimum
+      \code{lambda} value within one standard error of the minimum
+      cross-validation error.  Returned only when cross-validation output
+      is available.}
+
+    \item{\code{lambda.1se.max.indx}}{Index of the maximum
+      \code{lambda} value within one standard error of the minimum
+      cross-validation error.  Returned only when cross-validation output
+      is available.}
+
+    \item{\code{lambda.cvm}}{Mean cross-validation error for each
+      \code{lambda}.  Returned only when cross-validation output is
+      available.}
+
+    \item{\code{lambda.cvsd}}{Cross-validation standard-error values for
+      each \code{lambda}.  Returned only when cross-validation output is
+      available.}
+
+    \item{\code{ctime.internal}}{Timing information reported by the
+      native coordinate-descent routine.}
+
+    \item{\code{ctime.external}}{Elapsed R-side timing, computed from
+      \code{proc.time()}.}
+
+  }
 
 }
 
@@ -116,6 +152,7 @@ Use coordinate descent to fit lasso to a regression model.
 \seealso{
 
   \command{\link{rfsgt}}
+  
 }
 
 
@@ -126,6 +163,7 @@ Use coordinate descent to fit lasso to a regression model.
 ## regression example: boston housing
 ## ------------------------------------------------------------
 
+if (requireNamespace("mlbench", quietly = TRUE)) {
 ## load the data
 data(BostonHousing, package = "mlbench")
 
@@ -147,7 +185,7 @@ if (library("glmnet", logical.return = TRUE)) {
   print(bhat2)
 
 }
-
+}
 }
 }
 \keyword{lasso}

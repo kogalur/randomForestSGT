@@ -17,7 +17,7 @@ print.rfsgt <- function(x, ...) {
   nodeSZ <- mean(tapply(arr$nodeSZ, arr$treeID, mean, na.rm = TRUE), na.rm = TRUE)
   hcut.dim <- sum(!(colnames(arr) %in%
        c("treeID", "nodeID", "nodeSZ", "brnodeID", "betaZ", "yStar", "yBar", "prnodeID")))
-  ## output 
+  ## output
   cat("                         Sample size: ", x$n,                                  "\n", sep="")
   cat("                    Tree sample size: ", x$sampsize,                           "\n", sep="")
   cat("                     Number of trees: ", x$ntree,                              "\n", sep="")
@@ -28,9 +28,20 @@ print.rfsgt <- function(x, ...) {
   cat("                           Splitrule: ", x$splitrule,                          "\n", sep="")
   cat("                                hcut: ", x$hcut,                               "\n", sep="")
   cat("                      hcut-dimension: ", hcut.dim,                             "\n", sep="")
+  if (!is.null(x$node.center)) {
+    cat("                      Node centering: ", x$node.center,                      "\n", sep="")
+  }
+  if (!is.null(x$node.restrict)) {
+    cat("                    Restricted score: ", x$node.restrict,                    "\n", sep="")
+  }
   if (!is.null(x$yvar)) {
     cat("                       OOB R-squared: ", r.squared,                            "\n", sep="")
     cat("         OOB standardized error rate: ", serr.rate,                            "\n", sep="")
     cat("                      OOB error rate: ", err.rate,                             "\n", sep="")
+    ## the dictionary was screened on all cases: the OOB error is conditional on the
+    ## screen and optimistic (filter.type is recorded by rfsgt.workhorse)
+    if (!is.null(x$filter.type) && x$filter.type != "none") {
+      cat("  *** note: filtering was used, therefore OOB error will be optimistic (~5-10 percent) ***\n")
+    }
   }
 }

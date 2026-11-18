@@ -1,6 +1,6 @@
 Package: randomForestSGT
-Version: 0.0.1.74
-Date: 2025-07-16
+Version: 2.0.0
+Date: 2026-11-18
 Title: Random Forest Super Greedy Trees
 Authors@R: c(person("Min", "Lu", email = "luminwin@gmail.com", role = "aut"),
   person("Udaya B.", "Kogalur", email = "ubk@kogalur.com", role = c("aut", "cre")),
@@ -8,9 +8,20 @@ Authors@R: c(person("Min", "Lu", email = "luminwin@gmail.com", role = "aut"),
 Author: Min Lu [aut], Udaya B. Kogalur [aut, cre], Hemant Ishwaran [aut]
 Maintainer: Udaya B. Kogalur <ubk@kogalur.com>
 BugReports: https://github.com/kogalur/randomForestSGT/issues/
-Depends: R (>= 3.6.0),
-Imports: randomForestSRC (>= 3.3.8), varPro (>= 0.0.73)
+Depends: R (>= 4.3.0)
+Imports: randomForestSRC (>= 3.6.2), varPro (>= 3.1.0)
 Suggests: mlbench, interp, glmnet
-Description: Super greedy trees (SGTs) with univariate and multivariate geometric cuts are obtained using lasso and coordinate descent.
-License: GPL (>=3)
-URL: https://ishwaran.org/ https://kogalur.com/
+Description: Implements random forest Super Greedy Trees (SGTs) for
+  regression. SGTs extend classification and regression tree splitting
+  by fitting lasso-penalized local parametric models at tree nodes,
+  producing sparse univariate and multivariate geometric cuts such as
+  axis-aligned splits, hyperplanes, ellipsoids, hyperboloids, and
+  interaction-based cuts.  Trees are grown best-split-first by
+  selecting cuts that reduce empirical risk, and ensembles provide
+  out-of-bag error estimation, prediction on new data, variable
+  filtering, tuning of the hcut complexity parameter,
+  coordinate-descent lasso fitting, variable importance, and local
+  coefficient summaries. For the underlying method, 
+  see Ishwaran (2026) <doi:10.1007/s10462-026-11541-6>.
+License: GPL (>= 3)
+URL: https://ishwaran.org/

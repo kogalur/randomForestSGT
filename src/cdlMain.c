@@ -81,15 +81,11 @@ void cdlMain(char mode, int seedValue) {
   randomSetChainA    = &randomSetChainParallelA;
   randomGetChainA    = &randomGetChainParallelA;
   stackRandom(ranChainCnt, 0, 0, 0);
-  seedValueLC = abs(seedValue);
-  lcgenerator(&seedValueLC, TRUE);
+  seedValueLC = 0U - (uint) seedValue;
+  lcgeneratorWide(&seedValueLC, TRUE);
   for (b = 1; b <= ranChainCnt; b++) {
-    lcgenerator(&seedValueLC, FALSE);
-    lcgenerator(&seedValueLC, FALSE);
-    while(seedValueLC == 0) {
-      lcgenerator(&seedValueLC, FALSE);
-    }
-    randomSetChainA(b, -seedValueLC);
+    lcgeneratorWide(&seedValueLC, FALSE);
+    randomSetChainA(b, -(int) seedValueLC);
   }
   stackIncomingArrays(mode,
                       RF_ntree,
@@ -227,7 +223,8 @@ void cdlMain(char mode, int seedValue) {
                                      RF_rTargetFactor,
                                      RF_rTargetFactorCount,
                                      RF_tLeafCount_,
-                                     RF_holdBLKptr);
+                                     RF_holdBLKptr,
+                                     NULL);
   RF_incomingStackCount = 0;
   RF_incomingAuxiliaryInfoList = NULL;
   makeNode = & makeNodeDerived;
@@ -248,7 +245,9 @@ void cdlMain(char mode, int seedValue) {
                                           SG_sexpStringOutgoingCDL,
                                           NULL,
                                           1,
-                                          1);
+                                          (const AuxiliaryDimension[]) {
+                                            [1] = {RF_AUX_DIM_FIXED, 1}
+                                          });
   SG_cpuTime_ --;
   double **betaOutPtr;
   double **yHatOutPtr;

@@ -14,16 +14,10 @@
 #include "descriptor.h"
 #include "shared/nrutil.h"
 #include "shared/error.h"
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <errno.h>
 void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj *headDO) {
   DescriptorObj *tailDO, *currDO;
   char ctrlID;
-  int listen_sd, max_sd, new_sd;
+  rf_socket_t listen_sd, max_sd, new_sd;
   int desc_ready;
   int optval;
   int result;
@@ -37,30 +31,44 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
   uint32_t *hbo_intValuePtr;
   char serverExit;
   char closeConn;
-  int listen_i;
+  rf_socket_t listen_i;
   uint i, k;
+#ifdef _WIN32
+  WSADATA wsaData;
+  if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
+    RF_nativeError("\nRF-SRC:  *** ERROR *** ");
+    RF_nativeError("\nRF-SRC:  WSAStartup() failed.");
+    RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
+    RF_nativeExit();
+  }
+#endif
   tailDO = headDO;
   listen_sd = socket(AF_INET, SOCK_STREAM, 0); 
-  if (listen_sd < 0) { 
+  if (listen_sd == RF_INVALID_SOCKET) { 
     RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-    RF_nativeError("\nRF-SRC:  socket() failed with errno %10d.", errno);
+    RF_nativeError("\nRF-SRC:  socket() failed with errno %10d.", RF_LAST_SOCK_ERR());
     RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
     RF_nativeExit();
   } 
   optval = TRUE;
   result = setsockopt(listen_sd, SOL_SOCKET, SO_REUSEADDR, (char *) &optval, sizeof(optval));
   if (result < 0) { 
-    close(listen_sd);
+    RF_CLOSESOCK(listen_sd);
     RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-    RF_nativeError("\nRF-SRC:  setsockopt() failed with errno %10d.", port, errno);
+    RF_nativeError("\nRF-SRC:  setsockopt() failed with errno %10d.", port, RF_LAST_SOCK_ERR());
     RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
     RF_nativeExit();
   } 
-  result = ioctl(listen_sd, FIONBIO, (char *) &optval);
+#ifdef _WIN32
+  u_long nonblocking = 1;
+  result = RF_IOCTL(listen_sd, FIONBIO, &nonblocking);
+#else
+  result = RF_IOCTL(listen_sd, FIONBIO, (char *) &optval);
+#endif
   if (result < 0) { 
-    close(listen_sd);
+    RF_CLOSESOCK(listen_sd);
     RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-    RF_nativeError("\nRF-SRC:  ioctl() failed with errno %10d.", errno);
+    RF_nativeError("\nRF-SRC:  ioctl() failed with errno %10d.", RF_LAST_SOCK_ERR());
     RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
     RF_nativeExit();
   } 
@@ -70,17 +78,17 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
   addr.sin_port = htons(port); 
   result = bind(listen_sd, (struct sockaddr *) &addr, sizeof(addr));
   if (result < 0) { 
-    close(listen_sd);
+    RF_CLOSESOCK(listen_sd);
     RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-    RF_nativeError("\nRF-SRC:  bind() failed with errno %10d.", errno);
+    RF_nativeError("\nRF-SRC:  bind() failed with errno %10d.", RF_LAST_SOCK_ERR());
     RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
     RF_nativeExit();
   } 
   result = listen(listen_sd, SG_TCP_BACKLOG);
   if (result < 0) { 
-    close(listen_sd);
+    RF_CLOSESOCK(listen_sd);
     RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-    RF_nativeError("\nRF-SRC:  listen() failed with errno %10d.", errno);
+    RF_nativeError("\nRF-SRC:  listen() failed with errno %10d.", RF_LAST_SOCK_ERR());
     RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
     RF_nativeExit();
   } 
@@ -109,8 +117,8 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
           if (headDO -> userState != SG_DESC_CLOSED) {
             do {
               new_sd = accept(listen_sd, NULL, NULL);
-              if (new_sd < 0) {
-                if (errno != EWOULDBLOCK) {
+              if (new_sd == RF_INVALID_SOCKET) {
+                if (RF_LAST_SOCK_ERR() != RF_EWOULDBLOCK) {
                   serverExit = TRUE;
                 }
                 break;
@@ -128,7 +136,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
               if (new_sd > max_sd) {
                 max_sd = new_sd;
               }
-            } while (new_sd != -1);
+            } while (new_sd != RF_INVALID_SOCKET);
           }  
         }  
         else {
@@ -143,9 +151,9 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
           do {
             if (currDO -> socketState == SG_SOCK_STATE_OPN) {
               ctrlID = SG_TCP_CTRL_NAK;
-              result = recv(listen_i, &nboLength, sizeof(uint16_t), 0);
+              result = recv(listen_i, (char *) &nboLength, sizeof(uint16_t), 0);
               if (result < 0) {
-                if (errno != EWOULDBLOCK) {
+                if (RF_LAST_SOCK_ERR() != RF_EWOULDBLOCK) {
                   closeConn = TRUE;
                 }
                 break;
@@ -184,7 +192,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
             if (currDO -> socketState == SG_SOCK_STATE_LEN) {
               result = recv(listen_i, currDO -> record, currDO -> len, 0);
               if (result < 0) {
-                if (errno != EWOULDBLOCK) {
+                if (RF_LAST_SOCK_ERR() != RF_EWOULDBLOCK) {
                   closeConn = TRUE;
                 }
                 break;
@@ -276,7 +284,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
                 if (((currDO -> record[0] == SG_TCP_CTRL_TSZ) && ((currDO -> userState) == SG_DESC_POSTPREDICTING))) {
                     hboLength = currDO -> nSize;
                     nboLength = htons(hboLength);
-                    result = send(listen_i, &nboLength, sizeof(uint16_t), 0);
+                    result = send(listen_i, (const char *) &nboLength, sizeof(uint16_t), 0);
                     if (result == -1) {
                     }
                     else if (result == 0) {
@@ -374,7 +382,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
 #endif
           if (closeConn == TRUE) {
             currDO -> descID = 0;
-            close(listen_i);
+            RF_CLOSESOCK(listen_i);
             FD_CLR(listen_i, &master_set);
             if (listen_i == max_sd) {
               while (FD_ISSET(max_sd, &master_set) == FALSE) {
@@ -403,7 +411,7 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
   } while (serverExit == FALSE);
   for (listen_i = 0; listen_i <= max_sd; ++listen_i) {
     if (FD_ISSET(listen_i, &master_set)) {
-      close(listen_i);
+      RF_CLOSESOCK(listen_i);
     }
   }
   while (headDO != tailDO) {
@@ -415,18 +423,21 @@ void server(uint port, time_t userTimeout, uint xSize, uint pSize, DescriptorObj
     omp_unset_lock(&SG_lockDO);
 #endif
   }
+#ifdef _WIN32
+  WSACleanup();
+#endif
 }
-int serverSend(int clientSockFD, char *record, int length) {
+int serverSend(rf_socket_t clientSockFD, char *record, int length) {
   int recordLength;
   recordLength = send(clientSockFD, record, length, 0);
   if (recordLength == -1) {
     RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-    RF_nativeError("\nRF-SRC:  Unsuccessful send to client %10d with errno %10d.", clientSockFD, errno);
+    RF_nativeError("\nRF-SRC:  Unsuccessful send to client %10d with errno %10d.", clientSockFD, RF_LAST_SOCK_ERR());
     RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
   }
   return recordLength;
 }
-int flushReadBuffer(int clientSockFD, DescriptorObj *currDO, char *closeConn) {
+int flushReadBuffer(rf_socket_t clientSockFD, DescriptorObj *currDO, char *closeConn) {
   int result;
   do {
     result = recv(clientSockFD, currDO -> record, 1, 0);

@@ -5,6 +5,7 @@ predict.rfsgt.workhorse <-  function(object,
                                      seed = NULL,
                                      membership = FALSE,
                                      do.trace = FALSE,
+                                     node.restrict = NULL,
                                      ...)
 {
   ## confirm this is a rfsgt object
@@ -13,6 +14,11 @@ predict.rfsgt.workhorse <-  function(object,
   }
   ## hidden options (used later)
   dots <- list(...)
+  ## NULL: the setting recorded in the forest (FALSE for forests grown before 1.0.9)
+  if (is.null(node.restrict)) {
+    node.restrict <- if (!is.null(object$forest$node.restrict)) object$forest$node.restrict else FALSE
+  }
+  node.restrict.bits <- get.node.restrict.bits(node.restrict)
   ## initialize the seed
   seed <- get.seed(seed)
   ## hard coded options (some are legacy)
@@ -55,16 +61,47 @@ predict.rfsgt.workhorse <-  function(object,
   yvar.numeric.levels  <- NULL
   ## obtain x information from the grow object 
   xvar <- object$xvar
+  xvar.basis <- object$xvar.basis
+  xvar.info <- if (is.null(object$xvar.info)) xvar else object$xvar.info
   xvar.names <- object$xvar.names
   xvar.augment <- object$xvar.augment
   xvar.augment.names <- object$xvar.augment.names
+  term.map <- object$term.map
   xvar.types <- object$xvar.types
   xvar.nlevels  <- rep(0, length(xvar.types))
   xvar.numeric.levels  <- NULL
   ## default setting for augmented test data is NULL
   xvar.augment.newdata <- NULL
+  xvar.basis.newdata <- NULL
   ## recover hcut
   hcut  <- object$hcut
+  if (hcut == 0L) {
+    node.restrict.bits <- 0L
+  }
+  ## Rebuild the training basis payload from the saved source data and term map.
+  basis.active <- hcut > 0L &&
+    isTRUE(bitwAnd(as.integer(object$forest$experimental.bits),
+                   as.integer(get.basis.active.bits(TRUE))) != 0L)
+  node.center <- if (is.null(object$node.center)) basis.active else object$node.center
+  basis.bits <- get.basis.active.bits(basis.active)
+  basis.required <- basis.active || node.restrict.bits != 0L
+  basisXlist <- NULL
+  if (basis.required) {
+    if (anonymize.bits != 0) {
+      stop("Centered or restricted prediction requires a non-anonymous forest.")
+    }
+    ## Older objects can use xvar only if it contains every source parent.
+    if (is.null(xvar.basis)) {
+      xvar.basis <- xvar
+    }
+    basisXlist <- make.basis.payload(xvar.basis, term.map,
+                                   c(xvar.names, xvar.augment.names),
+                                   object$forest$hcutCnt,
+                                   node.center = basis.active)
+    basis.source.names <- colnames(xvar.basis)[
+      colnames(xvar.basis) %in% unlist(term.map$xvar.names, use.names = FALSE)
+    ]
+  }
   ##augmented x - convert to list for C-call
   if (hcut>1 && !is.null(xvar.augment.names)) {
     augmentXlist <- list(length(xvar.augment.names),  as.double(as.vector(data.matrix(xvar.augment))))
@@ -81,17 +118,16 @@ predict.rfsgt.workhorse <-  function(object,
   object <- object$forest
   ## confirm version coherence
   if (is.null(object$version)) {
-    cat("\n  This function only works with objects created with the following minimum version of the package:")
-    cat("\n    Minimum version:  ")
-    cat("0.0.0.0")
-    cat("\n    Your version:     ")
-    cat("unknown")
-    cat("\n")
-    stop()
+    stop(paste(paste0("\n  This function only works with objects created with the following minimum version of the package:"),
+               paste0("\n    Minimum version:  "),
+               paste0("0.0.0.0"),
+               paste0("\n    Your version:     "),
+               paste0("unknown"),
+               sep = "\n"))
   }
   else {
     object.version <- as.integer(unlist(strsplit(object$version, "[.]")))
-    installed.version <- as.integer(unlist(strsplit("0.0.1.74", "[.]")))
+    installed.version <- as.integer(unlist(strsplit("2.0.0", "[.]")))
     minimum.version <- as.integer(unlist(strsplit("0.0.0.0", "[.]")))
     object.version.adj <- object.version[1] + (object.version[2]/10) + (object.version[3]/100)
     installed.version.adj <- installed.version[1] + (installed.version[2]/10) + (installed.version[3]/100)
@@ -102,15 +138,28 @@ predict.rfsgt.workhorse <-  function(object,
       ## We are okay
     }
     else {
-      cat("\n  This function only works with objects created with the following minimum version of the package:")
-      cat("\n    Minimum version:  ")
-      cat("0.0.0.0")
-      cat("\n    Your version:     ")
-      cat(object$version)
-      cat("\n")
-      stop()
+        stop(paste(paste0("\n  This function only works with objects created with the following minimum version of the package:"),
+                   paste0("\n    Minimum version:  "),
+                   paste0("0.0.0.0"),
+                   paste0("\n    Your version:     "),
+                   paste0(object$version),
+                   sep = "\n"))
     }
   }
+  ## Validate the saved forest row count before integer coercion.
+  totalNodeCount <- object$totalNodeCount
+  if (!is.numeric(totalNodeCount) || is.complex(totalNodeCount) ||
+      length(totalNodeCount) != 1L || !is.finite(totalNodeCount) ||
+      totalNodeCount < 1 || totalNodeCount > .Machine$integer.max ||
+      totalNodeCount != floor(totalNodeCount)) {
+    stop("The saved forest row count must be a whole number between 1 and ",
+         .Machine$integer.max, ".")
+  }
+  nativeArrayRows <- nrow(object$nativeArray)
+  if (is.null(nativeArrayRows) || nativeArrayRows != totalNodeCount) {
+    stop("The saved forest row count does not match nrow(nativeArray).")
+  }
+  totalNodeCount <- as.integer(totalNodeCount)
   ##--------------------------------------------------------
   ##
   ## process x and y: test data is present
@@ -120,13 +169,24 @@ predict.rfsgt.workhorse <-  function(object,
     ## obtain the dimension
     n.newdata <- nrow(newdata)
     ## hot encode test xvar 
-    xvar.newdata <- get.hotencode.test(xvar, newdata)
+    xvar.newdata <- get.hotencode.test(xvar.info, newdata)
+    if (basis.required) {
+      xvar.basis.newdata <- xvar.newdata[, basis.source.names, drop = FALSE]
+    }
     ## create test augmented data (if necessary)
-    if (hcut>1 && !is.null(xvar.augment.names)) {
-      xvar.augment.newdata <- filter.baselearner(xvar.newdata, xvar.augment.names)$x
+    if (hcut>1 && !is.null(xvar.augment.names) && length(xvar.augment.names) > 0) {
+      if (!is.null(term.map)) {
+        xvar.augment.newdata <- filter.baselearner(
+          xvar.newdata,
+          get.term.map.subset(term.map, xvar.augment.names)
+        )$x
+      }
+      else {
+        xvar.augment.newdata <- filter.baselearner(xvar.newdata, xvar.augment.names)$x
+      }
     }
     ## restrict xvar to the training xvar.names
-    xvar.newdata <- xvar.newdata[, intersect(colnames(xvar.newdata), xvar.names), drop=FALSE]
+    xvar.newdata <- xvar.newdata[, xvar.names, drop = FALSE]
     ## extract test yvar (if present)
     yvar.present <- sum(is.element(yvar.names, names(newdata))) > 0
     if (yvar.present) {
@@ -161,16 +221,14 @@ predict.rfsgt.workhorse <-  function(object,
   perf.bits <-  get.perf.bits(perf.type)
   ## initialize the number of trees in the forest
   ntree <- object$ntree
-  ## process the get.tree vector that specifies which trees we want
-  ## to extract from the forest.  This is only relevant to restore mode.
-  ## The parameter is ignored in predict mode.
+  ## Resolve the trees requested for this prediction or restore call.
   get.tree <- get.tree.index(get.tree, ntree)
   bootstrap.bits <- get.bootstrap.bits(object$bootstrap)
   ## initialize the low bits
   ensemble.bits <- get.ensemble.bits(ensemble)
   ## Initalize the high bits
   samptype.bits <- get.samptype.bits(object$samptype)
-  membership.bits <-  get.membership.bits(membership)
+  membership.bits <- get.membership.bits(membership)
   ##  jitt.bits <- get.jitt.bits(jitt)
   ## We over-ride block-size in the case that get.tree is user specified
   block.size <- min(get.block.size.bits(block.size, ntree), sum(get.tree))
@@ -193,6 +251,11 @@ predict.rfsgt.workhorse <-  function(object,
   else {
     real.time.options  <- NULL
   }
+  ## Recover the lasso weights used to calculate the training node centers.
+  node.center.weights <- NULL
+  if (basis.active) {
+    node.center.weights <- object$lot[["lasso.weights"]]
+  }
   pivot = 6
   ## Start the C external timer.
   ctime.external.start  <- proc.time()
@@ -203,10 +266,13 @@ predict.rfsgt.workhorse <-  function(object,
                                              perf.bits +
                                              ensemble.bits +
                                              anonymize.bits),   ## low option word
-                                  as.integer(samptype.bits +    
-                                             membership.bits),  ## high option word
+                                  as.integer(membership.bits +  ## high option word
+                                             2^18 +             ## TERM_OUTG
+                                             samptype.bits),
                                   as.integer(omp.bits +
-                                             real.time.bits),  ## rfsgt (local and experimental) option word
+                                             real.time.bits +
+                                             basis.bits +
+                                             node.restrict.bits), ## rfsgt (local and experimental) option word
                                   as.integer(ntree),
                                   as.integer(object$n),
                                   list(as.integer(subj.unique.count),
@@ -248,11 +314,14 @@ predict.rfsgt.workhorse <-  function(object,
                                   as.double(as.vector(data.matrix(xvar))),
                                   ## assigmnent of augmented variables (list of two values: dimension, data)
                                   augmentXlist,
+                                  basisXlist,
+                                  if (is.null(node.center.weights)) NULL else as.double(as.vector(node.center.weights)),
                                   as.integer(n.newdata),
                                   if (is.null(yvar.newdata)) NULL else as.double(as.vector(yvar.newdata)),
                                   if (is.null(xvar.newdata)) NULL else as.double(as.vector(data.matrix(xvar.newdata))),
                                   if (is.null(xvar.augment.newdata)) NULL else as.double(as.vector(data.matrix(xvar.augment.newdata))),
-                                  as.integer(object$totalNodeCount),
+                                  if (is.null(xvar.basis.newdata)) NULL else as.double(as.vector(data.matrix(xvar.basis.newdata))),
+                                  totalNodeCount,
                                   as.integer(object$leafCount),
                                   as.integer(object$seed),
                                   as.integer((object$nativeArray)$treeID),
@@ -271,7 +340,8 @@ predict.rfsgt.workhorse <-  function(object,
                                   as.integer(get.tree),
                                   as.integer(block.size),
                                   if (real.time) list(as.integer(real.time.options$port), as.integer(real.time.options$time.out)) else NULL,
-                                  as.integer(get.rf.cores()))}, error = function(e){NULL})
+                                  as.integer(get.rf.cores()))},
+                           error = function(e) {print(e); NULL})
   ## Stop the C external timer.
   ctime.external.stop <- proc.time()
   ## check for error return condition in the native code
@@ -289,11 +359,26 @@ predict.rfsgt.workhorse <-  function(object,
   n.observed = ifelse(restore.mode, nrow(xvar), n.newdata)
   ## membership
   if (membership) {
-    membership.out <- matrix(nativeOutput$nodeMembership, c(n.observed, ntree))
+    membership.native <- nativeOutput[["nodeMembership"]]
+    if (is.null(membership.native) || length(membership.native) != n.observed * ntree) {
+      stop("Prediction returned missing or incorrectly sized nodeMembership output.",
+           call. = FALSE)
+    }
+    membership.out <- matrix(membership.native, nrow = n.observed, ncol = ntree)
     nativeOutput$nodeMembership <- NULL
     if (restore.mode) {
-      inbag.out <- matrix(nativeOutput$bootMembership, c(n.observed, ntree))
+      ## Accept both names used for native inbag-count output.
+      inbag.native <- nativeOutput[["bootMembership"]]
+      if (is.null(inbag.native)) {
+        inbag.native <- nativeOutput[["bootstrapCount"]]
+      }
+      if (is.null(inbag.native) || length(inbag.native) != n.observed * ntree) {
+        stop("Restore returned missing or incorrectly sized inbag counts ",
+             "(bootMembership or bootstrapCount).", call. = FALSE)
+      }
+      inbag.out <- matrix(inbag.native, nrow = n.observed, ncol = ntree)
       nativeOutput$bootMembership <- NULL
+      nativeOutput$bootstrapCount <- NULL
     }
     else {
       inbag.out <- NULL
@@ -315,9 +400,25 @@ predict.rfsgt.workhorse <-  function(object,
       err.rate  <- NULL
     }
   }
-  ## add yvar to forest in non-restore mode when y is absent in test data
-  if (!restore.mode && is.null(yvar.newdata)) {
+  ## A prediction on new data keeps the training response and the training source data
+  ## with its forest.  The native array holds the coefficients of a lasso terminal node
+  ## but not its center, its inbag box or its inbag response range.  The native code
+  ## recomputes these from the training data passed above, and get.beta recomputes them
+  ## in R from the two components kept here.  The prediction object otherwise holds the
+  ## new data only.  Both components refer to the data of the grow object and are not
+  ## copied.
+  if (!restore.mode) {
     object$yvar <- yvar
+    if (hcut > 0L) {
+      object$xvar.basis <- if (is.null(xvar.basis)) xvar else xvar.basis
+    }
+  }
+  ## add ambrOffset for non-restore mode
+  if (isFALSE(restore.mode)) {
+    ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n.newdata)
+  }
+  else {
+    ambrOffset <- NULL
   }
   ## make the output object
   rfsgtOutput <- list(
@@ -327,12 +428,20 @@ predict.rfsgt.workhorse <-  function(object,
     samptype = samptype,
     sampsize = sampsize,
     ntree = ntree,
+    get.tree = which(get.tree != 0L),
     hcut = hcut,
+    node.center = node.center,
+    node.restrict = node.restrict,
     splitrule = splitrule,
     yvar = (if (restore.mode) yvar else yvar.newdata),
     yvar.names = yvar.names,
     xvar = (if (restore.mode) xvar else xvar.newdata),
+    xvar.basis = (if (restore.mode) xvar.basis else xvar.basis.newdata),
+    xvar.augment = (if (restore.mode) xvar.augment else xvar.augment.newdata),
     xvar.names = xvar.names,
+    xvar.augment.names = xvar.augment.names,
+    xvar.info = xvar.info,
+    term.map = term.map,
     leaf.count = nativeOutput$leafCount,
     forest = object,
     membership = membership.out,
@@ -341,6 +450,7 @@ predict.rfsgt.workhorse <-  function(object,
     perf.type = perf.type,
     predicted = predicted,
     predicted.oob = predicted.oob,
+    ambrOffset = ambrOffset,
     err.rate = err.rate,
     ctime.internal = nativeOutput$cTimeInternal,
     ctime.external = ctime.external.stop - ctime.external.start

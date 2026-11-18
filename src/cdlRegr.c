@@ -18,6 +18,171 @@
 #include "stackOutput.h"
 #include "cdlInfo.h"
 #include "cdlUtil.h"
+char computeNodeCenter(uint memberSize, const uint *memberIndex,
+                       const double *weight, double *center) {
+  return computeNodeCenterAndSupport(memberSize, memberIndex, weight, NULL,
+                                     center, NULL);
+}
+char computeNodeCenterAndSupport(uint memberSize, const uint *memberIndex,
+                                 const double *weight, const double *response,
+                                 double *center, NodeSupport *support) {
+  char valid = TRUE;
+  if (memberSize > 0 && memberIndex != NULL) {
+    double weightSum = (weight == NULL) ? (double) memberSize : 0.0;
+    if (weight != NULL) {
+      for (uint k = 1; k <= memberSize; k++) {
+        uint i = memberIndex[k];
+        weightSum += weight[i];
+      }
+    }
+    if (!isfinite(weightSum) || weightSum <= 0.0) {
+      valid = FALSE;
+    }
+    if (valid) {
+      if (support != NULL) {
+        support -> yLower = support -> yUpper = response[memberIndex[1]];
+      }
+      double *weightNorm = dvector(1, memberSize);
+      for (uint k = 1; k <= memberSize; k++) {
+        weightNorm[k] = (weight == NULL) ?
+          1.0 / memberSize : weight[memberIndex[k]] / weightSum;
+        if (support != NULL) {
+          double value = response[memberIndex[k]];
+          if (!isfinite(value)) {
+            valid = FALSE;
+          }
+          if (value < support -> yLower) {
+            support -> yLower = value;
+          }
+          if (value > support -> yUpper) {
+            support -> yUpper = value;
+          }
+        }
+      }
+      for (uint j = 1; j <= SG_basisSourceSize; j++) {
+        center[j] = 0.0;
+        if (support != NULL) {
+          support -> lower[j] = support -> upper[j] = SG_basisSource[j][memberIndex[1]];
+        }
+        if (SG_basisCenterMask[j] || support != NULL) {
+          for (uint k = 1; k <= memberSize; k++) {
+            if (SG_basisCenterMask[j]) {
+              center[j] += SG_basisSource[j][memberIndex[k]] * weightNorm[k];
+            }
+            if (support != NULL) {
+              double value = SG_basisSource[j][memberIndex[k]];
+              if (!isfinite(value)) {
+                valid = FALSE;
+              }
+              if (value < support -> lower[j]) {
+                support -> lower[j] = value;
+              }
+              if (value > support -> upper[j]) {
+                support -> upper[j] = value;
+              }
+            }
+          }
+          if (!isfinite(center[j])) {
+            valid = FALSE;
+          }
+        }
+      }
+      free_dvector(weightNorm, 1, memberSize);
+    }
+  }
+  return valid;
+}
+static double nodeBasisIntegerPower(double value, uint power) {
+  double result = 1.0;
+  while (power > 0) {
+    if (power & 1U) {
+      result *= value;
+    }
+    power >>= 1;
+    if (power > 0) {
+      value *= value;
+    }
+  }
+  return result;
+}
+double evaluateNodeBasisTerm(double **source, const double *center,
+                             uint observationID, uint termID) {
+  double result = 1.0;
+  for (uint r = SG_basisTermOffset[termID];
+       r < SG_basisTermOffset[termID + 1]; r++) {
+    uint j = SG_basisParentIndex[r];
+    double value = source[j][observationID];
+    if (SG_basisCenterMask[j]) {
+      value -= center[j];
+    }
+    result *= nodeBasisIntegerPower(value, SG_basisParentPower[r]);
+  }
+  return result;
+}
+double evaluateRestrictedNodePrediction(double **source, const double *center,
+                                         const NodeSupport *support,
+                                         const double *beta, uint observationID,
+                                         double *scratch) {
+  for (uint j = 1; j <= SG_basisSourceSize; j++) {
+    double value = source[j][observationID];
+    if (value < support -> lower[j]) {
+      value = support -> lower[j];
+    }
+    else if (value > support -> upper[j]) {
+      value = support -> upper[j];
+    }
+    if (SG_basisCenterMask[j]) {
+      value -= center[j];
+    }
+    scratch[j] = value;
+  }
+  double predicted = beta[1];
+  for (uint termID = 1; termID <= SG_basisTermSize; termID++) {
+    if (beta[termID + 1] != 0.0) {
+      double term = 1.0;
+      for (uint r = SG_basisTermOffset[termID];
+           r < SG_basisTermOffset[termID + 1]; r++) {
+        term *= nodeBasisIntegerPower(scratch[SG_basisParentIndex[r]],
+                                      SG_basisParentPower[r]);
+      }
+      predicted = predicted + (beta[termID + 1] * term);
+    }
+  }
+  if (predicted < support -> yLower) {
+    return support -> yLower;
+  }
+  if (predicted > support -> yUpper) {
+    return support -> yUpper;
+  }
+  return predicted;
+}
+double **makeNodeBasis(const double *center,
+                       uint repMembrSize, const uint *repMembrIndx,
+                       uint oobMembrSize, const uint *oobMembrIndx) {
+  if (!(SG_optLocal & SG_OPT_SWTCH_NINE) ||
+      SG_basisSource == NULL || SG_basisTermSize == 0 ||
+      center == NULL || repMembrSize == 0 || repMembrIndx == NULL ||
+      (oobMembrSize > 0 && oobMembrIndx == NULL)) {
+    return NULL;
+  }
+  double **basis = dmatrix(1, SG_basisTermSize, 1, RF_observationSize);
+  for (uint termID = 1; termID <= SG_basisTermSize; termID++) {
+    for (uint k = 1; k <= repMembrSize; k++) {
+      uint i = repMembrIndx[k];
+      basis[termID][i] = evaluateNodeBasisTerm(SG_basisSource, center, i, termID);
+    }
+    for (uint k = 1; k <= oobMembrSize; k++) {
+      uint i = oobMembrIndx[k];
+      basis[termID][i] = evaluateNodeBasisTerm(SG_basisSource, center, i, termID);
+    }
+  }
+  return basis;
+}
+void freeNodeBasis(double **basis) {
+  if (basis != NULL) {
+    free_dmatrix(basis, 1, SG_basisTermSize, 1, RF_observationSize);
+  }
+}
 CDLInfo *coordinateDescentRegr(double  *lambdaUser,
                                uint     lambdaGridSize,
                                double   lambdaMinRatio,

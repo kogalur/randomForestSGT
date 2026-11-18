@@ -101,9 +101,8 @@ cdlasso.rfsgt <- function(formula,
                                        as.integer(efficiency.idx),
                                        if (is.null(weights)) NULL else as.double(as.vector(weights)),
                                        as.integer(nfolds)),
-                                  as.integer(get.rf.cores()))}, error = function(e) {
-                                    print(e)
-                                    NULL})
+                                  as.integer(get.rf.cores()))},
+                           error = function(e) {print(e); NULL})
   ## Stop the C external timer.
   ctime.external.stop <- proc.time()
   ## check for error return condition in the native code

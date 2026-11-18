@@ -310,7 +310,8 @@ char sgtMainRT(char mode, int seedValue) {
                                              RF_rTargetFactor,
                                              RF_rTargetFactorCount,
                                              RF_tLeafCount_,
-                                             RF_holdBLKptr);
+                                             RF_holdBLKptr,
+                                             NULL);
           for(b = 1; b <= RF_ntree; b++) {
             RF_serialTreeIndex[b] = 0;
           }
@@ -334,15 +335,11 @@ char sgtMainRT(char mode, int seedValue) {
             for (b = 1; b <= ranChainCnt; b++) {
               randomSetChainA(b , RF_seed_[b]);
             }
-            seedValueLC = abs(seedValue);
-            lcgenerator(&seedValueLC, TRUE);
+            seedValueLC = 0U - (uint) seedValue;
+            lcgeneratorWide(&seedValueLC, TRUE);
             for (b = 1; b <= ranChainCnt; b++) {
-              lcgenerator(&seedValueLC, FALSE);
-              lcgenerator(&seedValueLC, FALSE);
-              while(seedValueLC == 0) {
-                lcgenerator(&seedValueLC, FALSE);
-              }
-              randomSetChainB(b, -seedValueLC);
+              lcgeneratorWide(&seedValueLC, FALSE);
+              randomSetChainB(b, -(int) seedValueLC);
             }
 #ifdef _OPENMP
           stackLocksOpenMP(mode);

@@ -36,9 +36,9 @@ void *makeNodeDerived(uint xSize) {
   parent -> hcut = 0;
   parent -> outcome = 0;
   parent -> splitInfoDerived = NULL;
-  parent -> testMembrSizeAlloc = 0;
-  parent -> testMembrSize = 0;
-  parent -> testMembrIndx = NULL;
+  parent -> tstMembrSizeAlloc = 0;
+  parent -> tstMembrSize = 0;
+  parent -> tstMembrIndx = NULL;
   return parent;
 }
 void freeNodeDerived(void *parent) {
@@ -60,10 +60,10 @@ void freeNodeDerived(void *parent) {
   if (((Node*) parent) -> augm != NULL) {
     freeAugmentationObj(((Node*) parent) -> augm);
   }
-  if (((Node*) parent) -> testMembrSizeAlloc > 0) {
-    if (((Node*) parent) -> testMembrIndx != NULL) {
-      free_uivector(((Node*) parent) -> testMembrIndx, 1, ((Node*) parent) -> testMembrSizeAlloc);
-      ((Node*) parent) -> testMembrIndx = NULL;
+  if (((Node*) parent) -> tstMembrSizeAlloc > 0) {
+    if (((Node*) parent) -> tstMembrIndx != NULL) {
+      free_uivector(((Node*) parent) -> tstMembrIndx, 1, ((Node*) parent) -> tstMembrSizeAlloc);
+      ((Node*) parent) -> tstMembrIndx = NULL;
     }
   }
   deinitNodeBase((NodeBase*) parent);

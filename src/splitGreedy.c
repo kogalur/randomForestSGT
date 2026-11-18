@@ -24,6 +24,7 @@
 #include "shared/nrutil.h"
 #include "shared/error.h"
 #include "cvRegr.h"
+#include "cdlRegr.h"
 #include "cdlUtil.h"
 #include "cdlInfo.h"
 char getBestSplit(uint treeID, LatOptTreeObj *lotObj, GreedyObj *greedyMembr) {
@@ -457,8 +458,10 @@ char virtuallySplitNodeGreedyLasso(uint       treeID,
 }
 void initializeBetaAndPredicted(uint treeID, Node *parent) {
   double **xArray;
+  double **nodeBasis = NULL;
   double  *yArray;
   char    *perm;
+  char    *nodePerm = NULL;
   uint *repMembrIndx, *oobMembrIndx;
   uint  repMembrSize,  oobMembrSize;
   uint  hcut, hcutCnt;
@@ -477,6 +480,41 @@ void initializeBetaAndPredicted(uint treeID, Node *parent) {
   oobMembrIndx = ((NodeBase *) parent) -> oobMembrIndx;
   oobMembrSize = ((NodeBase *) parent) -> oobMembrSize;
   perm = parent -> augm -> perm;
+  if ((hcut >= 1) && (SG_optLocal & SG_OPT_SWTCH_NINE)) {
+    double *center = dvector(1, SG_basisSourceSize);
+    if (computeNodeCenter(repMembrSize, repMembrIndx, SG_weight, center)) {
+      nodeBasis = makeNodeBasis(center,
+                                repMembrSize, repMembrIndx,
+                                oobMembrSize, oobMembrIndx);
+    }
+    free_dvector(center, 1, SG_basisSourceSize);
+    if (nodeBasis == NULL) {
+      initializeBetaAndPredictedCart(treeID, parent);
+      parent -> eRisk = parent -> eRiskOOB = RF_nativeNaN;
+      return;
+    }
+    xArray = nodeBasis;
+    nodePerm = cvector(1, hcutCnt);
+    perm = nodePerm;
+    for (jj = 1; jj <= hcutCnt; jj++) {
+      perm[jj] = FALSE;
+      if (repMembrSize > 1) {
+        char finite = TRUE;
+        for (i = 1; i <= repMembrSize; i++) {
+          if (!isfinite(xArray[jj][repMembrIndx[i]])) {
+            finite = FALSE;
+            break;
+          }
+        }
+        if (finite) {
+          double variance;
+          getVarianceSinglePass(repMembrSize, repMembrIndx,
+                                xArray[jj], NULL, &variance);
+          perm[jj] = isfinite(variance) && (variance > EPSILON);
+        }
+      }
+    }
+  }
   beta = & (parent -> beta);
   yHatAbsoluteLasso = parent -> yHatAbsoluteLasso;
   yHatAbsoluteCart  = parent -> yHatAbsoluteCart;
@@ -534,7 +572,9 @@ void initializeBetaAndPredicted(uint treeID, Node *parent) {
       for (i = 1; i <= oobMembrSize; i++) {
         predicted = (*beta)[1];
         for (jj = 1; jj <= hcutCnt; jj++) {
-          predicted = predicted + ((*beta)[jj+1] * xArray[jj][oobMembrIndx[i]]);
+          if ((nodeBasis == NULL) || (fabs((*beta)[jj+1]) > 0.0)) {
+            predicted = predicted + ((*beta)[jj+1] * xArray[jj][oobMembrIndx[i]]);
+          }
         }
         yHatAbsoluteLasso[oobMembrIndx[i]] = predicted;
         *eRiskPtr += pow (yArray[oobMembrIndx[i]] - yHatAbsoluteLasso[oobMembrIndx[i]], 2.0);
@@ -544,6 +584,10 @@ void initializeBetaAndPredicted(uint treeID, Node *parent) {
       parent -> eRisk = parent -> eRiskOOB = RF_nativeNaN;
     }
     freeCDLInfo(obj);
+    if (nodeBasis != NULL) {
+      freeNodeBasis(nodeBasis);
+      free_cvector(nodePerm, 1, hcutCnt);
+    }
   }
   else {
     RF_nativeError("\nRF-SRC:  *** ERROR *** ");

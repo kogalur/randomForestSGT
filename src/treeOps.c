@@ -20,6 +20,8 @@
 #include "greedyOps.h"
 #include "splitGreedy.h"
 #include "splitRegr.h"
+#include "cdlRegr.h"
+#include "stackOutputQQ.h"
 #include "processEnsemble.h"
 #include "shared/stackMembershipVectors.h"
 #include "shared/stackPreDefined.h"
@@ -31,6 +33,8 @@
 #include "shared/termBaseOps.h"
 #include "shared/polarityNew.h"
 #include "shared/error.h"
+static void checkRestoreMembership(uint treeID, uint nSize, uint bootMembrSize, uint *bootMembrIndx);
+static char restorePredictReplicates(uint treeID, NodeBase *root, uint nSize, uint bootMembrSize);
 void acquireTree(char mode, uint treeID) {
   Node     *root;
   NodeBase *rootBase;
@@ -109,6 +113,9 @@ void acquireTree(char mode, uint treeID) {
                           SG_BOOT_CT_ptr);
   if (bootResult) {
     if (mode == RF_GROW) {
+      for (i = 1; i <= nSize; i++) {
+        RF_nodeMembership[treeID][i] = rootBase;
+      }
       rootBase -> repMembrIndx = bootMembrIndx;
       rootBase -> repMembrSize = rootBase -> repMembrSizeAlloc = bootMembrSize;
       SG_yHatAbsolute[treeID] = dvector(1, nSize);
@@ -130,11 +137,48 @@ void acquireTree(char mode, uint treeID) {
       root -> yHatAbsolute = SG_yHatAbsolute[treeID];
       root -> augm = getAugmentationObjGeneric(SG_augmObjCommon, treeID, root);
       restoreTreeLOT(treeID, root, SG_offsetTree);
+      if (mode == RF_REST) {
+        LeafLinkedObj *leaf = RF_leafLinkedObjHead[treeID] -> fwdLink;
+        while (leaf != NULL) {
+          Terminal *term = (Terminal *) leaf -> termPtr;
+          for (i = 1; i <= term -> repMembrCount; i++) {
+            uint observationID = term -> repMembrIndx[i];
+            RF_tTermMembership[treeID][observationID] = leaf -> termPtr;
+            if (RF_optHigh & OPT_MEMB_USER) {
+              SG_MEMB_ID_ptr[treeID][observationID] = leaf -> nodeID;
+            }
+          }
+          for (i = 1; i <= term -> oobMembrCount; i++) {
+            uint observationID = term -> oobMembrIndx[i];
+            RF_tTermMembership[treeID][observationID] = leaf -> termPtr;
+            if (RF_optHigh & OPT_MEMB_USER) {
+              SG_MEMB_ID_ptr[treeID][observationID] = leaf -> nodeID;
+            }
+          }
+          leaf = leaf -> fwdLink;
+        }
+      }
       if (mode == RF_PRED) {
         SG_yHatAbsoluteTest[treeID] = dvector(1, nSizeTest);
-        root -> testMembrSize = root -> testMembrSizeAlloc = RF_fobservationSize;
-        root -> testMembrIndx = RF_fidentityMembershipIndex;
+        root -> tstMembrSize = root -> tstMembrSizeAlloc = RF_fobservationSize;
+        root -> tstMembrIndx = RF_fidentityMembershipIndex;
+        if ((SG_optLocal & SG_OPT_SWTCH_NINE) &&
+            !restorePredictReplicates(treeID, rootBase, nSize, bootMembrSize)) {
+          RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+          RF_nativeError("\nRF-SGT: Unable to reconstruct centered prediction memberships for tree %u.", treeID);
+          RF_nativeExit();
+        }
         getTestMembershipLOT(treeID, root);
+        if (RF_optHigh & OPT_MEMB_USER) {
+          LeafLinkedObj *leaf = RF_leafLinkedObjHead[treeID] -> fwdLink;
+          while (leaf != NULL) {
+            Terminal *term = (Terminal *) leaf -> termPtr;
+            for (i = 1; i <= term -> tstMembrCount; i++) {
+              SG_MEMB_ID_ptr[treeID][term -> tstMembrIndx[i]] = leaf -> nodeID;
+            }
+            leaf = leaf -> fwdLink;
+          }
+        }
       }
     }
   }
@@ -152,6 +196,7 @@ void acquireTree(char mode, uint treeID) {
     if (RF_opt & OPT_TREE) {
       offsetTree = offsetCT = offsetID_rmbr = offsetID_ombr = 0;
       stackTreeObjectsPtrOnly(mode, treeID);
+      stackTNQualitativeObjectsTreePtr(mode, treeID);
       saveTree(treeID, rootBase, & offsetTree, & offsetCT, & offsetID_rmbr, & offsetID_ombr);
     }
   }
@@ -164,8 +209,8 @@ void acquireTree(char mode, uint treeID) {
     else {
       free_dvector(SG_yHatAbsolute[treeID], 1, nSize);
       if (mode == RF_PRED) {
-        root -> testMembrIndx = NULL;
-        root -> testMembrSize = root -> testMembrSizeAlloc = 0;
+        root -> tstMembrIndx = NULL;
+        root -> tstMembrSize = root -> tstMembrSizeAlloc = 0;
         free_dvector(SG_yHatAbsoluteTest[treeID], 1, nSizeTest);
       }
     }
@@ -468,7 +513,8 @@ char growTreeLOT (uint treeID, Node *root) {
       yHatAbsolute = parent -> yHatAbsolute;
       oobMembrSize = parentBase -> oobMembrSize;
       oobMembrIndx = parentBase -> oobMembrIndx;
-      if (root -> hcut > 0) {
+      if ((root -> hcut > 0) &&
+          !(SG_optLocal & SG_OPT_SWTCH_NINE)) {
         double *beta = parent -> beta;
         double **xArray = parent -> augm -> common -> xArray;
         uint  hcutCnt = parent -> augm -> common -> hcutCnt;    
@@ -482,7 +528,7 @@ char growTreeLOT (uint treeID, Node *root) {
           yHatAbsolute[oobMembrIndx[i]] = predicted;
         }
       }
-      else {
+      else if (root -> hcut == 0) {
         for (i = 1; i <= oobMembrSize; i++) {
           yHatAbsolute[oobMembrIndx[i]] = parent-> mean;
         }
@@ -610,6 +656,9 @@ char forkAndUpdate (uint treeID, GreedyObj *greedyMembr, uint *leafCount, NodeBa
       if (greedyMembr -> bestSplitType == REGR_CRT) {
         predicted = beta[1] + xArray[((SplitInfoMax *) (parent -> splitInfoDerived)) -> splitParameter][allMembrIndx[i]];
       }
+      else if (SG_optLocal & SG_OPT_SWTCH_NINE) {
+        predicted = yHatAbsolute[allMembrIndx[i]];
+      }
       else {
         predicted = beta[1];
         for (k = 1; k <= hcutCnt; k++) {
@@ -628,9 +677,14 @@ char forkAndUpdate (uint treeID, GreedyObj *greedyMembr, uint *leafCount, NodeBa
       }
       if (polarity == LEFT) {
         if (left -> outcome == OUTC_LASSO) {
-          predicted = left -> beta[1];
-          for (k = 1; k <= hcutCnt; k++) {
-            predicted = predicted + ((left -> beta[k+1]) * xArray[k][allMembrIndx[i]]);
+          if (SG_optLocal & SG_OPT_SWTCH_NINE) {
+            predicted = left -> yHatAbsoluteLasso[allMembrIndx[i]];
+          }
+          else {
+            predicted = left -> beta[1];
+            for (k = 1; k <= hcutCnt; k++) {
+              predicted = predicted + ((left -> beta[k+1]) * xArray[k][allMembrIndx[i]]);
+            }
           }
         }
         else {
@@ -639,9 +693,14 @@ char forkAndUpdate (uint treeID, GreedyObj *greedyMembr, uint *leafCount, NodeBa
       }
       else {
         if (right -> outcome == OUTC_LASSO) {
-          predicted = right -> beta[1];
-          for (k = 1; k <= hcutCnt; k++) {
-            predicted = predicted + ((right -> beta[k+1]) * xArray[k][allMembrIndx[i]]);
+          if (SG_optLocal & SG_OPT_SWTCH_NINE) {
+            predicted = right -> yHatAbsoluteLasso[allMembrIndx[i]];
+          }
+          else {
+            predicted = right -> beta[1];
+            for (k = 1; k <= hcutCnt; k++) {
+              predicted = predicted + ((right -> beta[k+1]) * xArray[k][allMembrIndx[i]]);
+            }
           }
         }
         else {
@@ -720,7 +779,7 @@ void saveTree(uint treeID, NodeBase *parent, ulong *offset, ulong *offsetCT, ulo
   }
   else {
     double *beta = ((Node *) parent) -> splitInfoDerived -> beta;
-    if (((Node *) parent) -> hcut >= 1) {
+    if (RF_nativeIsNaN(((Node *) parent) -> splitInfoDerived -> yBar)) {
       SG_yBar_ptr[treeID][*offset]  = RF_nativeNaN;
       SG_yStar_ptr[treeID][*offset] = ((Node *) parent) -> splitInfoDerived -> yStar;    
     }
@@ -744,9 +803,9 @@ void saveTree(uint treeID, NodeBase *parent, ulong *offset, ulong *offsetCT, ulo
   else {
     SG_brnodeID_ptr[treeID][parent -> brnodeID] = 0;
     (*offsetCT) ++;
-    SG_rmbrTNodeCT_ptr[treeID][*offsetCT] = ((Terminal *) (parent -> mate)) -> ibgMembrCount;
+    SG_rmbrTNodeCT_ptr[treeID][*offsetCT] = parent -> repMembrSize;
     SG_ombrTNodeCT_ptr[treeID][*offsetCT] = ((Terminal *) (parent -> mate)) -> oobMembrCount;
-    for (jj = 1; jj <= ((Terminal *) (parent -> mate)) -> ibgMembrCount; jj++) {
+    for (jj = 1; jj <= parent -> repMembrSize; jj++) {
       (*offsetID_rmbr) ++;
       SG_rmbrTNodeID_ptr[treeID][*offsetID_rmbr] = parent -> repMembrIndx[jj];
     }
@@ -839,10 +898,10 @@ void restoreTreeLOT(uint treeID, Node *parent, ulong *offsetTree) {
                      RF_rFactorIndex,      
                      RF_rFactorSize);      
     termPtr -> oobMembrCount = SG_ombrTNodeCT_[SG_offsetCT[treeID]];
-    termPtr -> ibgMembrCount = SG_rmbrTNodeCT_[SG_offsetCT[treeID]];
+    termPtr -> repMembrCount = SG_rmbrTNodeCT_[SG_offsetCT[treeID]];
     SG_offsetCT[treeID] ++;
-    termPtr -> ibgMembrIndx = SG_rmbrTNodeID_ + SG_offsetID_rmbr[treeID];
-    SG_offsetID_rmbr[treeID] += termPtr -> ibgMembrCount;
+    termPtr -> repMembrIndx = SG_rmbrTNodeID_ + SG_offsetID_rmbr[treeID];
+    SG_offsetID_rmbr[treeID] += termPtr -> repMembrCount;
     termPtr -> oobMembrIndx = SG_ombrTNodeID_ + SG_offsetID_ombr[treeID];
     SG_offsetID_ombr[treeID] += termPtr -> oobMembrCount;
     parentBase -> mate = termBasePtr;
@@ -870,25 +929,100 @@ void restoreTreeLOT(uint treeID, Node *parent, ulong *offsetTree) {
     restoreTreeLOT(treeID, right, offsetTree);
   }
 }
+static char restorePredictReplicates(uint treeID, NodeBase *root, uint nSize, uint bootMembrSize) {
+  NodeBase *node;
+  LeafLinkedObj *leaf;
+  Terminal *term;
+  uint i, observationID;
+  NodeBase **membership = RF_nodeMembership[treeID];
+  for (i = 1; i <= nSize; i++) {
+    membership[i] = NULL;
+  }
+  for (leaf = RF_leafLinkedObjHead[treeID] -> fwdLink;
+       leaf != NULL; leaf = leaf -> fwdLink) {
+    node = (NodeBase *) leaf -> nodePtr;
+    term = (Terminal *) leaf -> termPtr;
+    for (i = 1; i <= term -> repMembrCount; i++) {
+      observationID = term -> repMembrIndx[i];
+      membership[observationID] = node;
+    }
+    for (; node != root; node = node -> parent) {
+      if (node -> repMembrIndx == NULL) {      
+        node -> repMembrSizeAlloc = node -> repMembrSize;
+        node -> repMembrIndx = uivector(1, node -> repMembrSizeAlloc);
+        node -> repMembrSize = 0;
+      }
+    }
+  }
+  for (i = 1; i <= bootMembrSize; i++) {
+    observationID = root -> repMembrIndx[i];
+    for (node = membership[observationID]; node != root;
+         node = node -> parent) {
+      node -> repMembrIndx[++node -> repMembrSize] = observationID;
+    }
+  }
+  for (leaf = RF_leafLinkedObjHead[treeID] -> fwdLink;
+       leaf != NULL; leaf = leaf -> fwdLink) {
+    node = (NodeBase *) leaf -> nodePtr;
+    term = (Terminal *) leaf -> termPtr;
+    if (node -> repMembrSize != term -> repMembrCount) {
+      return FALSE;
+    }
+    for (i = 1; i <= term -> repMembrCount; i++) {
+      if (node -> repMembrIndx[i] != term -> repMembrIndx[i]) {
+        return FALSE;
+      }
+    }
+    for (; node != root; node = node -> parent) {
+      if (node -> repMembrSize != node -> repMembrSizeAlloc) {
+        return FALSE;
+      }
+    }
+  }
+  return TRUE;
+}
 void getTestMembershipLOT(uint treeID, Node *parent) {
   NodeBase *parentBase;
   NodeBase *leftBase;
   NodeBase *rightBase;
   Node *left;
   Node *right;
+  Terminal *termPtr;
+  TerminalBase *termBasePtr;
   double **fxArray;
   double *beta;
+  double *nodeCenter = NULL;
   double yStar;
   double predicted;
   uint hcutCnt;
-  uint testMembrSize, leftTestMembrSize, rghtTestMembrSize;
-  uint *testMembrIndx, *leftTestMembrIndx, *rghtTestMembrIndx;
+  uint tstMembrSize, leftTestMembrSize, rghtTestMembrSize;
+  uint *tstMembrIndx, *leftTestMembrIndx, *rghtTestMembrIndx;
   uint i, k;
   parentBase = (NodeBase *) parent;
-  testMembrIndx = parent -> testMembrIndx;
-  testMembrSize = parent -> testMembrSize;
+  tstMembrIndx = parent -> tstMembrIndx;
+  tstMembrSize = parent -> tstMembrSize;
   hcutCnt = parent -> augm -> common -> hcutCnt;
   fxArray = parent -> augm -> common -> fxArray;
+  if ((SG_optLocal & SG_OPT_SWTCH_NINE) && parent -> hcut > 0 &&
+      (parent -> splitInfoDerived != NULL ||
+       !(SG_optLocal & SG_OPT_NODE_RESTRICT))) {
+    if (SG_fbasisSource == NULL || parentBase -> repMembrSize == 0 ||
+        parentBase -> repMembrIndx == NULL) {
+      RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+      RF_nativeError("\nRF-SGT: Missing centered prediction inputs for tree %u, node %u.",
+                     treeID, parentBase -> nodeID);
+      RF_nativeExit();
+    }
+    nodeCenter = dvector(1, SG_basisSourceSize);
+    if (!computeNodeCenter(parentBase -> repMembrSize, parentBase -> repMembrIndx,
+                           SG_weight, nodeCenter)) {
+      free_dvector(nodeCenter, 1, SG_basisSourceSize);
+      RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+      RF_nativeError("\nRF-SGT: Unable to reconstruct center for tree %u, node %u.",
+                     treeID, parentBase -> nodeID);
+      RF_nativeExit();
+    }
+  }
   leftTestMembrSize = rghtTestMembrSize = 0;
   if (parent -> splitInfoDerived != NULL) {
     leftBase  = parentBase -> left;
@@ -897,58 +1031,116 @@ void getTestMembershipLOT(uint treeID, Node *parent) {
     right = (Node *) rightBase;
     beta = parent -> splitInfoDerived -> beta;
     yStar = parent -> splitInfoDerived -> yStar;
-    left  -> testMembrIndx = leftTestMembrIndx   = uivector(1, testMembrSize);
-    right -> testMembrIndx = rghtTestMembrIndx  = uivector(1, testMembrSize);
-    left  -> testMembrSizeAlloc = testMembrSize;
-    right -> testMembrSizeAlloc = testMembrSize;
+    left  -> tstMembrIndx = leftTestMembrIndx   = uivector(1, tstMembrSize);
+    right -> tstMembrIndx = rghtTestMembrIndx  = uivector(1, tstMembrSize);
+    left  -> tstMembrSizeAlloc = tstMembrSize;
+    right -> tstMembrSizeAlloc = tstMembrSize;
     if (parent -> hcut == 0) {
-      for (i = 1; i <= testMembrSize; i++) {
+      for (i = 1; i <= tstMembrSize; i++) {
         predicted = beta[1];
         for (k = 1; k <= parentBase -> xSize; k++) {
-          predicted = predicted + (beta[k+1] * fxArray[k][testMembrIndx[i]]);
+          predicted = predicted + (beta[k+1] * fxArray[k][tstMembrIndx[i]]);
         }
         if (predicted <= yStar) {
-          leftTestMembrIndx[++leftTestMembrSize] = testMembrIndx[i];
+          leftTestMembrIndx[++leftTestMembrSize] = tstMembrIndx[i];
         }
         else {
-          rghtTestMembrIndx[++rghtTestMembrSize] = testMembrIndx[i];
+          rghtTestMembrIndx[++rghtTestMembrSize] = tstMembrIndx[i];
         }
       }
     }
     else {
-      for (i = 1; i <= testMembrSize; i++) {
+      for (i = 1; i <= tstMembrSize; i++) {
         predicted = beta[1];
         for (k = 1; k <= hcutCnt; k++) {
-          predicted = predicted + (beta[k+1] * fxArray[k][testMembrIndx[i]]);
+          if (nodeCenter == NULL) {
+            predicted = predicted + (beta[k+1] * fxArray[k][tstMembrIndx[i]]);
+          }
+          else if (fabs(beta[k+1]) > 0.0) {
+            predicted = predicted + (beta[k+1] *
+              evaluateNodeBasisTerm(SG_fbasisSource, nodeCenter, tstMembrIndx[i], k));
+          }
         }
         if (predicted <= yStar) {
-          leftTestMembrIndx[++leftTestMembrSize] = testMembrIndx[i];
+          leftTestMembrIndx[++leftTestMembrSize] = tstMembrIndx[i];
         }
         else {
-          rghtTestMembrIndx[++rghtTestMembrSize] = testMembrIndx[i];
+          rghtTestMembrIndx[++rghtTestMembrSize] = tstMembrIndx[i];
         }
       }
     }
-    left -> testMembrSize = leftTestMembrSize;
-    right -> testMembrSize = rghtTestMembrSize;
+    left -> tstMembrSize = leftTestMembrSize;
+    right -> tstMembrSize = rghtTestMembrSize;
   }
   else {
     beta = parent -> beta;
     if (parent -> hcut == 0) {
       predicted = parent -> mean;
-      for (i = 1; i <= testMembrSize; i++) {
-        SG_yHatAbsoluteTest[treeID][testMembrIndx[i]] = predicted;
+      for (i = 1; i <= tstMembrSize; i++) {
+        SG_yHatAbsoluteTest[treeID][tstMembrIndx[i]] = predicted;
       }
+    }
+    else if (SG_optLocal & SG_OPT_NODE_RESTRICT) {
+      termPtr = (Terminal *) parentBase -> mate;
+      if (SG_fbasisSource == NULL || termPtr -> repMembrCount == 0 ||
+          termPtr -> repMembrIndx == NULL ||
+          parent -> augm -> common -> yArray == NULL) {
+        RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+        RF_nativeError("\nRF-SGT: Missing restricted prediction inputs for tree %u, node %u.",
+                       treeID, parentBase -> nodeID);
+        RF_nativeExit();
+      }
+      NodeSupport support;
+      support.lower = dvector(1, SG_basisSourceSize);
+      support.upper = dvector(1, SG_basisSourceSize);
+      nodeCenter = dvector(1, SG_basisSourceSize);
+      if (!computeNodeCenterAndSupport(termPtr -> repMembrCount,
+                                       termPtr -> repMembrIndx, SG_weight,
+                                       parent -> augm -> common -> yArray,
+                                       nodeCenter, &support)) {
+        free_dvector(support.lower, 1, SG_basisSourceSize);
+        free_dvector(support.upper, 1, SG_basisSourceSize);
+        free_dvector(nodeCenter, 1, SG_basisSourceSize);
+        RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+        RF_nativeError("\nRF-SGT: Unable to reconstruct support for tree %u, node %u.",
+                       treeID, parentBase -> nodeID);
+        RF_nativeExit();
+      }
+      double *scratch = dvector(1, SG_basisSourceSize);
+      for (i = 1; i <= tstMembrSize; i++) {
+        SG_yHatAbsoluteTest[treeID][tstMembrIndx[i]] =
+          evaluateRestrictedNodePrediction(SG_fbasisSource, nodeCenter, &support,
+                                           beta, tstMembrIndx[i], scratch);
+      }
+      free_dvector(scratch, 1, SG_basisSourceSize);
+      free_dvector(support.lower, 1, SG_basisSourceSize);
+      free_dvector(support.upper, 1, SG_basisSourceSize);
     }
     else {
-      for (i = 1; i <= testMembrSize; i++) {
+      for (i = 1; i <= tstMembrSize; i++) {
         predicted = beta[1];
         for (k = 1; k <= hcutCnt; k++) {
-          predicted = predicted + (beta[k+1] * fxArray[k][testMembrIndx[i]]);
+          if (nodeCenter == NULL) {
+            predicted = predicted + (beta[k+1] * fxArray[k][tstMembrIndx[i]]);
+          }
+          else if (fabs(beta[k+1]) > 0.0) {
+            predicted = predicted + (beta[k+1] *
+              evaluateNodeBasisTerm(SG_fbasisSource, nodeCenter, tstMembrIndx[i], k));
+          }
         }
-        SG_yHatAbsoluteTest[treeID][testMembrIndx[i]] = predicted;
+        SG_yHatAbsoluteTest[treeID][tstMembrIndx[i]] = predicted;
       }
     }
+    termBasePtr = parentBase -> mate;
+    termPtr = (Terminal *) termBasePtr;
+    termPtr -> tstMembrCount = parent -> tstMembrSize;
+    termPtr -> tstMembrIndx = uivector(1, termPtr -> tstMembrCount);
+    for (i = 1; i <= termPtr -> tstMembrCount; i++) {
+      termPtr -> tstMembrIndx[i] = parent -> tstMembrIndx[i];
+    }
+  }
+  if (nodeCenter != NULL) {
+    free_dvector(nodeCenter, 1, SG_basisSourceSize);
   }
   if (parent -> splitInfoDerived != NULL) {
     if (leftTestMembrSize > 0) {
@@ -957,5 +1149,81 @@ void getTestMembershipLOT(uint treeID, Node *parent) {
     if (rghtTestMembrSize > 0) {
       getTestMembershipLOT(treeID, (Node*) (((NodeBase*) parent) -> right));
     }
+  }
+}
+static void checkRestoreMembership(uint treeID,
+                            uint nSize,
+                            uint bootMembrSize,
+                            uint *bootMembrIndx) {
+  uint *bootstrapCount = uivector(1, nSize);
+  uint *terminalCount = uivector(1, nSize);
+  uint kind, i, ii, membershipSize;
+  uint *membershipIndex;
+  const char *label;
+  LeafLinkedObj *leaf;
+  Terminal *term;
+  char valid = TRUE;
+  for (kind = 0; kind < 2; kind++) {
+    label = (kind == 0) ? "replicated" : "OOB";
+    for (i = 1; i <= nSize; i++) {
+      bootstrapCount[i] = terminalCount[i] = 0;
+    }
+    membershipSize = (kind == 0) ? bootMembrSize : RF_oobSize[treeID];
+    membershipIndex = (kind == 0) ? bootMembrIndx : RF_oobMembershipIndex[treeID];
+    for (i = 1; i <= membershipSize; i++) {
+      ii = membershipIndex[i];
+      if (ii == 0 || ii > nSize) {
+        RF_nativeError("\nRF-SGT: Restore %s membership check failed for tree %u:"
+                       " bootstrap index %u contains invalid observation %u.\n",
+                       label, treeID, i, ii);
+        valid = FALSE;
+        goto cleanup;
+      }
+      bootstrapCount[ii]++;
+    }
+    for (leaf = RF_leafLinkedObjHead[treeID] -> fwdLink;
+         leaf != NULL; leaf = leaf -> fwdLink) {
+      term = (Terminal *) leaf -> termPtr;
+      membershipSize = (kind == 0) ? term -> repMembrCount : term -> oobMembrCount;
+      membershipIndex = (kind == 0) ? term -> repMembrIndx : term -> oobMembrIndx;
+      for (i = 1; i <= membershipSize; i++) {
+        ii = membershipIndex[i];
+        if (ii == 0 || ii > nSize) {
+          RF_nativeError("\nRF-SGT: Restore %s membership check failed for tree %u,"
+                         " node %u: terminal index %u contains invalid observation %u.\n",
+                         label, treeID, leaf -> nodeID, i, ii);
+          valid = FALSE;
+          goto cleanup;
+        }
+        terminalCount[ii]++;
+      }
+    }
+    for (i = 1; i <= nSize; i++) {
+      if (bootstrapCount[i] != terminalCount[i]) {
+        RF_nativeError("\nRF-SGT: Restore %s membership mismatch for tree %u,"
+                       " observation %u: bootstrap count=%u, terminal count=%u.\n",
+                       label, treeID, i, bootstrapCount[i], terminalCount[i]);
+        valid = FALSE;
+        goto cleanup;
+      }
+      if (kind == 1 && terminalCount[i] > 1) {
+        RF_nativeError("\nRF-SGT: Duplicate OOB membership for tree %u,"
+                       " observation %u: count=%u.\n",
+                       treeID, i, terminalCount[i]);
+        valid = FALSE;
+        goto cleanup;
+      }
+    }
+  }
+cleanup:
+  free_uivector(terminalCount, 1, nSize);
+  free_uivector(bootstrapCount, 1, nSize);
+  if (valid) {
+    RF_nativePrint("\nRF-SGT: Restore membership check passed for tree %u:"
+                   " replicated=%u, OOB=%u.\n",
+                   treeID, bootMembrSize, RF_oobSize[treeID]);
+  }
+  else {
+    RF_nativeExit();
   }
 }

@@ -215,12 +215,12 @@ void predictTreeRT(uint treeID) {
   Node     *root;
   SG_yHatAbsoluteTest[treeID] = dvector(1, RF_fobservationSize);
   root = (Node *) RF_root[treeID];
-  root -> testMembrSize = root -> testMembrSizeAlloc = RF_fobservationSize;
-  root -> testMembrIndx = RF_fidentityMembershipIndex;
+  root -> tstMembrSize = root -> tstMembrSizeAlloc = RF_fobservationSize;
+  root -> tstMembrIndx = RF_fidentityMembershipIndex;
   getTestMembershipLOT(treeID, root);
   updateEnsembleMeanRT(treeID);
-  root -> testMembrIndx = NULL;
-  root -> testMembrSize = root -> testMembrSizeAlloc = 0;
+  root -> tstMembrIndx = NULL;
+  root -> tstMembrSize = root -> tstMembrSizeAlloc = 0;
   freeTestMembership(treeID, (NodeBase *) root);
   free_dvector(SG_yHatAbsoluteTest[treeID], 1, RF_fobservationSize);
 }
@@ -230,12 +230,12 @@ void freeTestMembership(uint treeID, NodeBase *parent) {
       freeTestMembership(treeID, ((NodeBase *) parent) -> left);
       freeTestMembership(treeID, ((NodeBase *) parent) -> right);
     }
-    if (((Node*) parent) -> testMembrSizeAlloc > 0) {
-      if (((Node*) parent) -> testMembrIndx != NULL) {
-        free_uivector(((Node*) parent) -> testMembrIndx, 1, ((Node*) parent) -> testMembrSizeAlloc);
-        ((Node*) parent) -> testMembrIndx = NULL;
+    if (((Node*) parent) -> tstMembrSizeAlloc > 0) {
+      if (((Node*) parent) -> tstMembrIndx != NULL) {
+        free_uivector(((Node*) parent) -> tstMembrIndx, 1, ((Node*) parent) -> tstMembrSizeAlloc);
+        ((Node*) parent) -> tstMembrIndx = NULL;
       }
-      ((Node*) parent) -> testMembrSizeAlloc = 0;
+      ((Node*) parent) -> tstMembrSizeAlloc = 0;
     }
   }
 }

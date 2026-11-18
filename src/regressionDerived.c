@@ -21,6 +21,7 @@
 #include "terminal.h"
 #include "termOps.h"
 #include "shared/nrutil.h"
+#include "shared/error.h"
 void calculateAllTerminalNodeOutcomesSGT(char mode,
                                          uint treeID,
                                          TerminalBase  *term) {
@@ -78,6 +79,8 @@ void calculateMeanResponseCDL(uint treeID, Terminal *term) {
   if (SG_optLocal & SG_OPT_SWTCH_SIX) {
     if (!RF_nativeIsNaN(parent -> eRisk) && !RF_nativeIsNaN(parent -> eRiskCart)) {
       if (parent -> eRiskCart <= parent -> eRisk) {
+        parent -> hcut = 0;
+        parent -> outcome = OUTC_CART;
         yArray = parent -> augm -> common -> yArray;
         yHatAbsolute = parent -> yHatAbsolute;
         for (i = 1; i <= allMembrSize; i++) {
@@ -85,6 +88,36 @@ void calculateMeanResponseCDL(uint treeID, Terminal *term) {
         }
       }
     }
+  }
+  if ((SG_optLocal & SG_OPT_NODE_RESTRICT) && parent -> hcut > 0 &&
+      term -> oobMembrCount > 0) {
+    yArray = parent -> augm -> common -> yArray;
+    yHatAbsolute = parent -> yHatAbsolute;
+    NodeSupport support;
+    support.lower = dvector(1, SG_basisSourceSize);
+    support.upper = dvector(1, SG_basisSourceSize);
+    double *nodeCenter = dvector(1, SG_basisSourceSize);
+    if (!computeNodeCenterAndSupport(term -> repMembrCount, term -> repMembrIndx,
+                                     SG_weight, yArray, nodeCenter, &support)) {
+      free_dvector(support.lower, 1, SG_basisSourceSize);
+      free_dvector(support.upper, 1, SG_basisSourceSize);
+      free_dvector(nodeCenter, 1, SG_basisSourceSize);
+      RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+      RF_nativeError("\nRF-SGT: Unable to reconstruct grow support for tree %u, node %u.",
+                     treeID, parentBase -> nodeID);
+      RF_nativeExit();
+    }
+    double *scratch = dvector(1, SG_basisSourceSize);
+    for (i = 1; i <= term -> oobMembrCount; i++) {
+      uint observationID = term -> oobMembrIndx[i];
+      yHatAbsolute[observationID] =
+        evaluateRestrictedNodePrediction(SG_basisSource, nodeCenter, &support,
+                                         parent -> beta, observationID, scratch);
+    }
+    free_dvector(scratch, 1, SG_basisSourceSize);
+    free_dvector(support.lower, 1, SG_basisSourceSize);
+    free_dvector(support.upper, 1, SG_basisSourceSize);
+    free_dvector(nodeCenter, 1, SG_basisSourceSize);
   }
 }
 void updateEnsembleMeanCDL(char mode, uint treeID) {
@@ -174,8 +207,8 @@ void restoreMeanResponseCDL(uint treeID, Terminal *term) {
   TerminalBase *termBase;
   NodeBase *parentBase;
   Node *parent;
-  uint *oobMembrIndx, *ibgMembrIndx;
-  uint  oobMembrCount, ibgMembrCount;
+  uint *oobMembrIndx, *repMembrIndx;
+  uint  oobMembrCount, repMembrCount;
   double **xArray;
   double *yHatAbsolute;
   double *beta;
@@ -186,27 +219,87 @@ void restoreMeanResponseCDL(uint treeID, Terminal *term) {
   parentBase = termBase -> mate;
   parent     = (Node *) parentBase;
   oobMembrCount = term -> oobMembrCount;
-  ibgMembrCount = term -> ibgMembrCount;
+  repMembrCount = term -> repMembrCount;
   oobMembrIndx  = term -> oobMembrIndx;
-  ibgMembrIndx  = term -> ibgMembrIndx;
+  repMembrIndx  = term -> repMembrIndx;
   yHatAbsolute = parent -> yHatAbsolute;
   if (RF_nativeIsNaN(parent -> mean)) {
     hcutCnt = parent -> augm -> common -> hcutCnt;    
     xArray = parent -> augm -> common -> xArray;
     beta = parent -> beta;
+    char restrictOOB = (SG_optLocal & SG_OPT_NODE_RESTRICT) && oobMembrCount > 0;
+    NodeSupport support;
+    double *scratch = NULL;
+    double *nodeCenter = NULL;
+    if ((SG_optLocal & SG_OPT_SWTCH_NINE) || restrictOOB) {
+      nodeCenter = dvector(1, SG_basisSourceSize);
+      char valid;
+      if (restrictOOB) {
+        support.lower = dvector(1, SG_basisSourceSize);
+        support.upper = dvector(1, SG_basisSourceSize);
+        valid = computeNodeCenterAndSupport(repMembrCount, repMembrIndx, SG_weight,
+                                            parent -> augm -> common -> yArray,
+                                            nodeCenter, &support);
+      }
+      else {
+        valid = computeNodeCenter(repMembrCount, repMembrIndx, SG_weight, nodeCenter);
+      }
+      if (!valid) {
+        free_dvector(nodeCenter, 1, SG_basisSourceSize);
+        if (restrictOOB) {
+          free_dvector(support.lower, 1, SG_basisSourceSize);
+          free_dvector(support.upper, 1, SG_basisSourceSize);
+        }
+        RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+        RF_nativeError("\nRF-SGT: Unable to reconstruct %s for tree %u, node %u.",
+                       restrictOOB ? "support" : "center", treeID, parentBase -> nodeID);
+        RF_nativeExit();
+      }
+      if (restrictOOB) {
+        scratch = dvector(1, SG_basisSourceSize);
+      }
+    }
     for (i = 1; i <= oobMembrCount; i++) {
+      if (restrictOOB) {
+        yHatAbsolute[oobMembrIndx[i]] =
+          evaluateRestrictedNodePrediction(SG_basisSource, nodeCenter, &support,
+                                           beta, oobMembrIndx[i], scratch);
+        continue;
+      }
       predicted = beta[1];
       for (jj = 1; jj <= hcutCnt; jj++) {
-        predicted = predicted + (beta[jj+1] * xArray[jj][oobMembrIndx[i]]);
+        if (nodeCenter == NULL) {
+          predicted = predicted + (beta[jj+1] * xArray[jj][oobMembrIndx[i]]);
+        }
+        else if (fabs(beta[jj+1]) > 0.0) {
+          predicted = predicted + (beta[jj+1] *
+                                   evaluateNodeBasisTerm(SG_basisSource, nodeCenter,
+                                                         oobMembrIndx[i], jj));
+        }
       }
       yHatAbsolute[oobMembrIndx[i]] = predicted;
     }
-    for (i = 1; i <= ibgMembrCount; i++) {
+    for (i = 1; i <= repMembrCount; i++) {
       predicted = beta[1];
       for (jj = 1; jj <= hcutCnt; jj++) {
-        predicted = predicted + (beta[jj+1] * xArray[jj][ibgMembrIndx[i]]);
+        if (!(SG_optLocal & SG_OPT_SWTCH_NINE)) {
+          predicted = predicted + (beta[jj+1] * xArray[jj][repMembrIndx[i]]);
+        }
+        else if (fabs(beta[jj+1]) > 0.0) {
+          predicted = predicted + (beta[jj+1] *
+                                   evaluateNodeBasisTerm(SG_basisSource, nodeCenter,
+                                                         repMembrIndx[i], jj));
+        }
       }
-      yHatAbsolute[ibgMembrIndx[i]] = predicted;
+      yHatAbsolute[repMembrIndx[i]] = predicted;
+    }
+    if (restrictOOB) {
+      free_dvector(scratch, 1, SG_basisSourceSize);
+      free_dvector(support.lower, 1, SG_basisSourceSize);
+      free_dvector(support.upper, 1, SG_basisSourceSize);
+    }
+    if (nodeCenter != NULL) {
+      free_dvector(nodeCenter, 1, SG_basisSourceSize);
     }
   }
   else {
@@ -214,8 +307,8 @@ void restoreMeanResponseCDL(uint treeID, Terminal *term) {
     for (i = 1; i <= oobMembrCount; i++) {
       yHatAbsolute[oobMembrIndx[i]] = term -> mean;
     }
-    for (i = 1; i <= ibgMembrCount; i++) {
-      yHatAbsolute[ibgMembrIndx[i]] = term -> mean;
+    for (i = 1; i <= repMembrCount; i++) {
+      yHatAbsolute[repMembrIndx[i]] = term -> mean;
     }
   }
 }

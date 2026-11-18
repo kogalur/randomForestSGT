@@ -1,7 +1,7 @@
 #ifndef  RF_PREPROCESS_FOREST_RECORD_H
 #define  RF_PREPROCESS_FOREST_RECORD_H
 void preprocessForestRecord(uint    ntree,
-                            uint    totalNodeCount,
+                            ulong   totalNodeCount,
                             uint   *treeID,
                             uint   *nodeID,
                             int   **parmID,
@@ -14,5 +14,5 @@ void preprocessForestRecord(uint    ntree,
                             uint  **mwcpCT,
                             ulong **restoreMWCPoffset,
                             ulong  *totalTerminalCount);
-void preprocessForestRecordSynthetic();
+void preprocessForestRecordSynthetic(void);
 #endif

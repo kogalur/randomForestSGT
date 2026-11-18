@@ -1,21 +1,34 @@
 ## Dynamic C-code Library.
 useDynLib(randomForestSGT, .registration = TRUE)
 
-importFrom("parallel", mclapply)
 importFrom("randomForestSRC", "rfsrc")
+importFrom("varPro", "varpro", "get.orgvimp", "get.vimp", "cv.varpro")
+
+importFrom("graphics", "plot", "lines", "points", "text", "axis", "mtext", "par")
+importFrom("graphics", "abline", "boxplot", "legend")
+importFrom("grDevices", "grey")
+importFrom("parallel", mclapply)
 importFrom("stats", "runif", "as.formula", "formula", "na.omit", "model.matrix", "sd", "var")
 importFrom("stats", "rnorm", "setNames")
+importFrom("stats", "loess", "lowess", "predict", "quantile")
 importFrom("utils", "tail", "combn", "capture.output")
-importFrom("varPro", "varpro", "get.orgvimp", "get.vimp", "cv.varpro")
+
+
 
 export(rfsgt,
        cdlasso,
        cdlasso.rfsgt,
+       cv.rfsgt,
        filter.rfsgt,
        filter.custom.rfsgt,
        get.beta,
+       importance.beta,
        make.baselearner,
+       make.folds,
+       partial.beta,
+       plot.rfsgt,
        predict.rfsgt,
+       print.cv.rfsgt,
        print.rfsgt,
        print.vimp.rfsgt,
        rfsgt.news,
@@ -24,6 +37,8 @@ export(rfsgt,
        vimp.rfsgt)
 
 
+S3method(plot, rfsgt)
 S3method(predict, rfsgt)
+S3method(print, cv.rfsgt)
 S3method(print, rfsgt)
 S3method(print, vimp.rfsgt)

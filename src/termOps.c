@@ -28,11 +28,15 @@ void *makeTerminalDerived(void) {
   Terminal *parent = (Terminal*) gblock((size_t) sizeof(Terminal));
   preInitTerminalBase((TerminalBase *) parent);
   parent -> mean = 0.0;
-  parent -> ibgMembrCount = 0;
+  parent -> repMembrCount = 0;
   parent -> oobMembrCount = 0;
+  parent -> ibgMembrCount = 0;
+  parent -> tstMembrCount = 0;
   parent -> allMembrCount = 0;
+  parent -> repMembrIndx  = NULL;
   parent -> ibgMembrIndx  = NULL;
   parent -> oobMembrIndx  = NULL;
+  parent -> tstMembrIndx  = NULL;
   return parent;
 }
 void freeTerminalDerived(void *parent) {
@@ -41,6 +45,9 @@ void freeTerminalDerived(void *parent) {
     free_uivector(((Terminal *) parent) -> oobMembrIndx,  1, ((Terminal *) parent) -> allMembrCount);
     free_uivector(((Terminal *) parent) -> repMembrIndx,  1, ((Terminal *) parent) -> repMembrCount);
     free_uivector(((Terminal *) parent) -> ibgMembrIndx,  1, ((Terminal *) parent) -> repMembrCount);
+  }
+  if (((Terminal *) parent) -> tstMembrCount > 0) {
+    free_uivector(((Terminal *) parent) -> tstMembrIndx,  1, ((Terminal *) parent) -> tstMembrCount);
   }
   free_gblock(parent, (size_t) sizeof(Terminal));
 }

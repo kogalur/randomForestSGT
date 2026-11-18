@@ -37,7 +37,11 @@
 typedef unsigned int  uint;
 #endif
 #ifndef ulong
+#ifdef _WIN64
+typedef unsigned long long ulong;
+#else
 typedef unsigned long ulong;
+#endif
 #endif
 #define RF_SEXP_ASCII_SIZE 16
 #define RF_OUTP_ID   0  
@@ -209,7 +213,8 @@ typedef unsigned long ulong;
 #define RIGHT     0x02
 #define NEITHER   0x00
 #define BOTH      0x03
-#define EPSILON 1.0e-9
+#define EPSILON    1.0e-9
+#define EPSILON2   0x01p-31
 #define RF_GROW   0x01
 #define RF_PRED   0x02
 #define RF_REST   0x04

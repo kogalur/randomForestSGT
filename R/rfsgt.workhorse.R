@@ -5,14 +5,14 @@ rfsgt.workhorse <- function(formula,
                             treesize = NULL,
                             nodesize = NULL,
                             filter = TRUE,
-                            bsf = NULL,
+                            bsf = "inbag",
                             keep.only = NULL,
                             fast = TRUE,
                             pure.lasso = FALSE,
                             eps = .005,
                             maxit = 500,
                             nfolds = 10,
-                            block.size = 10,
+                            block.size = 1,
                             bootstrap = c("by.root", "none", "by.user"),
                             samptype = c("swor", "swr"),
                             samp = NULL,
@@ -20,15 +20,28 @@ rfsgt.workhorse <- function(formula,
                             membership = FALSE,
                             sampsize = if (samptype == "swor") function(x){x * .632} else function(x){x},
                             ntime = 150,
+                            node.center = TRUE,
                             seed = NULL,
                             do.trace = FALSE,
+                            node.restrict = FALSE,
                             ...
                             )
 {
+  if (missing(node.center) && inherits(filter, "tune.hcut") &&
+      !is.null(attr(filter, "node.center"))) {
+    node.center <- attr(filter, "node.center")
+  }
+  if (!is.logical(node.center) || length(node.center) != 1L || is.na(node.center)) {
+    stop("node.center must be TRUE or FALSE")
+  }
   ## hidden options (used later)
   dots <- list(...)
+  node.restrict.bits <- get.node.restrict.bits(node.restrict)
   ## initialize the seed
   seed <- get.seed(seed)
+  ## internal callers that reach the workhorse directly default to
+  ## pure inbag empirical risk minimization unless they request otherwise
+  bsf <- get.bsf(bsf, default = "inbag")
   ## formula, family, xvar.names, yvar.names
   formula.prelim <- parse.formula(formula, data, NULL)
   formula.detail <- finalize.formula(formula.prelim, data)
@@ -55,6 +68,9 @@ rfsgt.workhorse <- function(formula,
   yvar.nlevels <- yfactor$nlevels
   yvar.numeric.levels <- get.numeric.levels(family, yfactor$nlevels, yvar)
   ## grow options depending on splitrule and hcut
+  if (inherits(filter, "tune.hcut")) {
+    hcut <- attr(filter, "hcut")
+  }
   splitinfo <- get.splitinfo(formula.detail, dots$splitrule, hcut, dots$nsplit, nfolds)
   hcut <- splitinfo$hcut
   nsplit <- splitinfo$nsplit
@@ -62,6 +78,7 @@ rfsgt.workhorse <- function(formula,
   ## flag for building agumented x baselearner
   baselearner.flag <- TRUE
   augmentX <- augmentXlist <- hcutCnt <- NULL
+  term.map <- NULL
   ## keep only a requested subset of the features? ignored if filter is of type "tune.hcut"
   xvar.keep <- xvar.org.names
   if (!is.null(keep.only) && !inherits(filter, "tune.hcut")) {
@@ -72,11 +89,12 @@ rfsgt.workhorse <- function(formula,
   }
   ## hot-encode the data (which can be subsetted)
   xvar <- get.hotencode(data[, xvar.keep, drop=FALSE])
+  xvar.source.full <- xvar
   ## dimension reduction using tune.hcut filtering variables
   ## filtering is switched off and we build the augmented x here
   if (inherits(filter, "tune.hcut")) {
-    hcut <- attr(filter, "hcut")
     baselearnerO <- filter.baselearner(xvar, filter)
+    term.map <- baselearnerO$term.map
     xvar <- baselearnerO$x[, baselearnerO$xvar.names, drop = FALSE]
     hcutCnt <- ncol(xvar)
     if (length(baselearnerO$xvar.augment.names) > 0) {
@@ -96,7 +114,8 @@ rfsgt.workhorse <- function(formula,
   if (filter) {
     df <- data.frame(yvar, xvar)
     colnames(df) <- c(yvar.names, colnames(xvar))
-    xvar.keep.custom <- filter.custom.rfsgt(formula, df, hcut=hcut, method="liberal", fast=fast)
+    xvar.keep.custom <- filter.custom.rfsgt(formula, df, hcut=hcut, method="liberal", fast=fast,
+                                          node.center=node.center)
     if (sum(colnames(xvar) %in% xvar.keep.custom) > 0) {
       xvar <- xvar[, colnames(xvar) %in% xvar.keep.custom, drop = FALSE]
     }
@@ -134,11 +153,43 @@ rfsgt.workhorse <- function(formula,
       augmentXlist <- list(ncol(augmentX), as.double(as.vector(data.matrix(augmentX))))
     }
   }
+  ## exact term map for the filtered/baselearner design
+  term.names <- c(xvar.names, colnames(augmentX))
+  if (is.term.map(term.map)) {
+    term.map <- get.term.map.subset(term.map, term.names)
+    if (!identical(as.character(term.map$term), as.character(term.names))) {
+      stop("retained term.map does not match the native beta order")
+    }
+  }
+  else {
+    term.map <- get.term.map(xvar, filter = c(xvar.names, colnames(augmentX)))
+  }
+  splitinfo$hcut <- hcut
+  ## Filtering can change hcut and remove parents of retained augmented terms.
+  basis.active <- isTRUE(node.center) && hcut > 0L
+  if (hcut == 0L) {
+    node.restrict.bits <- 0L
+  }
+  basis.required <- basis.active || node.restrict.bits != 0L
+  basisXlist <- NULL
+  xvar.basis <- NULL
+  ## Retain source parents for support reconstruction in either dictionary.
+  if (hcut > 0L) {
+    basis.source.names <- colnames(xvar.source.full)[
+      colnames(xvar.source.full) %in% get.term.map.parents(term.map, type = "xvar.names")
+    ]
+    xvar.basis <- xvar.source.full[, basis.source.names, drop = FALSE]
+  }
+  if (basis.required) {
+    basisXlist <- make.basis.payload(xvar.basis, term.map, term.names, hcutCnt,
+                                   node.center = basis.active)
+  }
   ## pure lasso details
   if (pure.lasso && hcut>0) {
     dots$experimental.bits <- as.integer(0)
   }
-  experimental.bits <- as.integer(get.experimental.bits(dots$experimental.bits, bsf, hcut))
+  experimental.bits <- get.experimental.bits(dots$experimental.bits, hcut) +
+    get.bsf.bits(bsf) + get.basis.active.bits(basis.active) + node.restrict.bits
   ## tree grow options
   mtry <- get.mtry(family, n.xvar, dots$mtry)
   nodesize <- get.nodesize(family, nodesize)    
@@ -255,7 +306,7 @@ rfsgt.workhorse <- function(formula,
   ensemble.bits <- get.ensemble.bits(ensemble)
   forest.bits <- get.forest.bits(forest)
   ## Assign high bits for the native code
-  membership.bits <-  get.membership.bits(membership)
+  membership.bits <- get.membership.bits(membership)
   samptype.bits <- get.samptype.bits(samptype)
   ## block size
   block.size <- get.block.size.bits(block.size, ntree)
@@ -276,6 +327,7 @@ rfsgt.workhorse <- function(formula,
                                              ensemble.bits +
                                              forest.bits),  
                                   as.integer(membership.bits +    ## high option word
+                                             2^18 +               ## MEMB_OUTG and TERM_OUTG
                                              samptype.bits),
                                   as.integer(omp.bits +
                                              experimental.bits),  ## rfsgt (local experimental) option word
@@ -327,6 +379,7 @@ rfsgt.workhorse <- function(formula,
                                   ## so we have two elements, the first is the dimension, the second is the array. You should
                                   ## replace these with the actual values.
                                   augmentXlist,
+                                  basisXlist,
                                   list(as.integer(nlambda),
                                        if (is.null(lambda)) NULL else as.double(as.vector(lambda)),
                                        as.double(lambda.min.ratio),
@@ -337,7 +390,8 @@ rfsgt.workhorse <- function(formula,
                                        if (is.null(weights)) NULL else as.double(as.vector(weights)),
                                        as.integer(nfolds)),
                                   as.integer(block.size),
-                                  as.integer(get.rf.cores()))}, error = function(e) {NULL})
+                                  as.integer(get.rf.cores()))},
+                           error = function(e) {print(e); NULL})
   ## Stop the C external timer.
   ctime.external.stop <- proc.time()
   ## check for error return condition in the native code
@@ -374,7 +428,7 @@ rfsgt.workhorse <- function(formula,
   colnames(nativeArray) <- c("treeID", "nodeID", "nodeSZ", "brnodeID",
                              "betaZ", as.character(1:hcutCnt), "yStar", "yBar", "prnodeID")
   ## save the lot 
-  lot <- c(lot, lasso=lasso, experimental.bits=experimental.bits)
+  lot <- c(lot, lasso=lasso, experimental.bits=experimental.bits, bsf=bsf)
   forest.out  <- list(forest = TRUE,
                       ntree = ntree,
                       n = n,
@@ -389,18 +443,22 @@ rfsgt.workhorse <- function(formula,
                       family = family,
                       bootstrap = bootstrap,
                       samptype = samptype,
+                      bsf = bsf,
+                      node.center = basis.active,
+                      node.restrict = node.restrict,
                       experimental.bits = experimental.bits,
                       rmbrCount = nativeOutput$rmbrCount,
                       ombrCount = nativeOutput$ombrCount,
                       rmbrIdent = nativeOutput$rmbrIdent,
                       ombrIdent = nativeOutput$ombrIdent,
                       ambrOffset = matrix(nativeOutput$ambrOffset, nrow = n),
-                      version = "0.0.1.74")
+                      version = "2.0.0")
   empr.risk <- NULL
   oob.empr.risk <- NULL
   empr.risk.cart <- NULL
   oob.empr.risk.cart <- NULL
     nodeStat <- NULL
+  bsf.order <- NULL
   if (!is.null(nativeOutput$bsfOrder)) {
     bsf.order <- nativeOutput$bsfOrder
     nativeOutput$bsfOrder <- NULL
@@ -455,8 +513,11 @@ rfsgt.workhorse <- function(formula,
     bootstrap = bootstrap,
     samptype = samptype,
     sampsize = sampsize,
+    samp = samp,
     ntree = ntree,
     hcut = hcut,
+    node.center = node.center,
+    node.restrict = node.restrict,
     splitrule = splitinfo$splitrule,
     splitinfo = splitinfo,
     yvar = yvar,
@@ -464,16 +525,20 @@ rfsgt.workhorse <- function(formula,
     yvar.factor = yfactor,
     yvar.types = yvar.types,
     xvar = xvar,
+    xvar.basis = xvar.basis,
     xvar.augment = augmentX,
     xvar.names = xvar.names,
     xvar.types = xvar.types,
+    xvar.info = NULL,
     xvar.augment.names = colnames(augmentX),
+    term.map = term.map,
     forest = forest.out,
     nodeStat = nodeStat,
     empr.risk = empr.risk,
     oob.empr.risk = oob.empr.risk,
     empr.risk.cart = empr.risk.cart,
     oob.empr.risk.cart = oob.empr.risk.cart,
+    bsf = bsf,
     bsf.order = bsf.order,
     predicted = predicted,
     predicted.oob = predicted.oob,

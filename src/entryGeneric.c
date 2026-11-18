@@ -83,6 +83,7 @@ char processDefaultPredict(void) {
     if (!(RF_opt & OPT_OENS)) {
       RF_opt = RF_opt & (~OPT_PERF);
     }
+    RF_optHigh = RF_optHigh & (~OPT_TERM_OUTG);
     break;
   }
   RF_xWeight = RF_yWeight = RF_xWeightStat = NULL;  

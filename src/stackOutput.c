@@ -60,7 +60,7 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                   double   **lambdaCVSD) {
   uint lambdaGridSizeThinned;
   uint yHatCnt;
-  uint localRecordCount;
+  ulong localRecordCount;
   lambdaGridSizeThinned = obj -> lambdaCnt;
   yHatCnt = obj -> yHatCnt;
   *lambdaCount = (uint*) stackAndProtect(RF_auxDimConsts,
@@ -73,7 +73,9 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                          SG_sexpStringOutgoingCDL,
                                          NULL,
                                          1,
-                                         1);
+                                         (const AuxiliaryDimension[]) {
+                                           [1] = {RF_AUX_DIM_FIXED, 1}
+                                         });
   (*lambdaCount) --;
   localRecordCount = lambdaGridSizeThinned;
   *lambda = (double*) stackAndProtect(RF_auxDimConsts,
@@ -86,7 +88,9 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                       SG_sexpStringOutgoingCDL,
                                       NULL,
                                       1,
-                                      localRecordCount);
+                                      (const AuxiliaryDimension[]) {
+                                        [1] = {RF_AUX_DIM_FIXED, localRecordCount}
+                                      });
   (*lambda) --;
   localRecordCount = lambdaGridSizeThinned;
   *convergenceCount = (uint*) stackAndProtect(RF_auxDimConsts,
@@ -99,9 +103,11 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                               SG_sexpStringOutgoingCDL,
                                               NULL,
                                               1,
-                                              localRecordCount);
+                                              (const AuxiliaryDimension[]) {
+                                                [1] = {RF_AUX_DIM_FIXED, localRecordCount}
+                                              });
   (*convergenceCount) --;
-  localRecordCount = lambdaGridSizeThinned * (RF_xSize + 1);
+  localRecordCount = (ulong) lambdaGridSizeThinned * ((ulong) RF_xSize + 1);
   *beta = (double*) stackAndProtect(RF_auxDimConsts,
                                     RF_GROW,
                                     &RF_nativeIndex,
@@ -112,10 +118,12 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                     SG_sexpStringOutgoingCDL,
                                     betaPtr,
                                     2,
-                                    lambdaGridSizeThinned,
-                                    RF_xSize + 1);
+                                    (const AuxiliaryDimension[]) {
+                                      [1] = {RF_AUX_DIM_FIXED, lambdaGridSizeThinned},
+                                      [2] = {RF_AUX_DIM_FIXED, (ulong) RF_xSize + 1}
+                                    });
   if (yHatCnt > 0) {
-    localRecordCount = lambdaGridSizeThinned * yHatCnt;
+    localRecordCount = (ulong) lambdaGridSizeThinned * yHatCnt;
     *yHat = (double*) stackAndProtect(RF_auxDimConsts,
                                       RF_GROW,
                                       &RF_nativeIndex,
@@ -126,8 +134,10 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                       SG_sexpStringOutgoingCDL,
                                       yHatPtr,
                                       2,
-                                      lambdaGridSizeThinned,
-                                      yHatCnt);
+                                      (const AuxiliaryDimension[]) {
+                                        [1] = {RF_AUX_DIM_FIXED, lambdaGridSizeThinned},
+                                        [2] = {RF_AUX_DIM_FIXED, yHatCnt}
+                                      });
     *lambdaMinIndx = (uint*) stackAndProtect(RF_auxDimConsts,
                                              RF_GROW,
                                              &RF_nativeIndex,
@@ -138,7 +148,9 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                              SG_sexpStringOutgoingCDL,
                                              NULL,
                                              1,
-                                             1);
+                                             (const AuxiliaryDimension[]) {
+                                               [1] = {RF_AUX_DIM_FIXED, 1}
+                                             });
     (*lambdaMinIndx) --;
     *lambda1SEIndxMin = (uint*) stackAndProtect(RF_auxDimConsts,
                                                 RF_GROW,
@@ -150,7 +162,9 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                                 SG_sexpStringOutgoingCDL,
                                                 NULL,
                                                 1,
-                                                1);
+                                                (const AuxiliaryDimension[]) {
+                                                  [1] = {RF_AUX_DIM_FIXED, 1}
+                                                });
     (*lambda1SEIndxMin) --;
     *lambda1SEIndxMax = (uint*) stackAndProtect(RF_auxDimConsts,
                                                 RF_GROW,
@@ -162,7 +176,9 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                                 SG_sexpStringOutgoingCDL,
                                                 NULL,
                                                 1,
-                                                1);
+                                                (const AuxiliaryDimension[]) {
+                                                  [1] = {RF_AUX_DIM_FIXED, 1}
+                                                });
     (*lambda1SEIndxMax) --;
     localRecordCount = lambdaGridSizeThinned;
     *lambdaMeanErr = (double*) stackAndProtect(RF_auxDimConsts,
@@ -175,7 +191,9 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                                SG_sexpStringOutgoingCDL,
                                                NULL,
                                                1,
-                                               localRecordCount);
+                                               (const AuxiliaryDimension[]) {
+                                                 [1] = {RF_AUX_DIM_FIXED, localRecordCount}
+                                               });
     (*lambdaMeanErr) --;
     localRecordCount = lambdaGridSizeThinned;
     *lambdaCVSD = (double*) stackAndProtect(RF_auxDimConsts,
@@ -188,13 +206,15 @@ void stackCoordinateDescentOutput(CDLInfo  *obj,
                                             SG_sexpStringOutgoingCDL,
                                             NULL,
                                             1,
-                                            localRecordCount);
+                                            (const AuxiliaryDimension[]) {
+                                              [1] = {RF_AUX_DIM_FIXED, localRecordCount}
+                                            });
     (*lambdaCVSD) --;
   }
 }
 void stackDefinedOutputObjects(char mode) {
   uint  sexpIdentity;
-  uint localSize;
+  ulong localSize;
   uint  obsSize;
   double **ensembleDen;
   double   **ensembleCLS;
@@ -206,9 +226,12 @@ void stackDefinedOutputObjects(char mode) {
   char oobFlag, fullFlag;
   uint i, j, k;
   sexpIdentity = 0;
-  if ((TRUE) || (mode == RF_GROW)) {
+  if ((mode == RF_GROW) || (mode == RF_REST)) {
     if (RF_opt & OPT_LEAF) {
       RF_stackCount += 1;
+    }
+    if (RF_optHigh & OPT_TERM_OUTG) {
+      RF_stackCount += 6;
     }
     if ((RF_opt & OPT_IENS) || (RF_opt & OPT_FENS)) {
       if (RF_rTargetFactorCount > 0) {
@@ -238,8 +261,8 @@ void stackDefinedOutputObjects(char mode) {
       if (RF_opt & OPT_SEED) {
         RF_stackCount += 1;
       }
-        RF_stackCount += 1;
-        RF_stackCount += 16;
+      RF_stackCount += 1;
+      RF_stackCount += 10;
     }
     if (RF_opt & OPT_EMPR_RISK) {
       RF_stackCount += 2;
@@ -250,6 +273,33 @@ void stackDefinedOutputObjects(char mode) {
     }
     obsSize = RF_observationSize;
   }  
+  else {
+    if (RF_opt & OPT_LEAF) {
+      RF_stackCount += 1;  
+    }
+    if (RF_optHigh & OPT_TERM_OUTG) {
+      RF_stackCount += 1;
+    }
+    if (RF_opt & OPT_FENS) {
+      if (RF_rTargetFactorCount > 0) {
+        RF_stackCount += 1;
+      }
+      if (RF_rTargetNonFactorCount > 0) {
+        RF_stackCount += 1;
+      }
+    }
+    if (RF_opt & OPT_PERF) {
+      if (RF_rTargetFactorCount > 0) {
+        RF_stackCount += 1;
+      }
+      if (RF_rTargetNonFactorCount > 0) {
+        RF_stackCount += 1;
+      }
+    }
+    if (RF_optHigh & OPT_MEMB_USER) {
+      RF_stackCount += 2;
+    }
+  }
   RF_stackCount +=1;
   initProtect(RF_stackCount);
   stackAuxiliaryInfoList(&RF_snpAuxiliaryInfoList, RF_stackCount);
@@ -324,9 +374,11 @@ void stackDefinedOutputObjects(char mode) {
                                                  SG_sexpStringOutgoing,
                                                  ensembleCLSptr,
                                                  3,
-                                                 RF_rTargetFactorCount,
-                                                 0,
-                                                 obsSize);
+                                                 (const AuxiliaryDimension[]) {
+                                                   [1] = {RF_AUX_DIM_FIXED, RF_rTargetFactorCount},
+                                                   [2] = {RF_AUX_DIM_FACTOR_SIZE, 0},
+                                                   [3] = {RF_AUX_DIM_FIXED, obsSize}
+                                                 });
         *ensembleCLSnum = (double ***) new_vvector(1, RF_rTargetFactorCount, NRUTIL_DPTR2);
         localSize = 0;
         for (j = 1; j <= RF_rTargetFactorCount; j++) {
@@ -342,7 +394,7 @@ void stackDefinedOutputObjects(char mode) {
       }
       if (RF_rTargetNonFactorCount > 0) {
         (oobFlag == TRUE) ? (sexpIdentity = SG_ORGR_ID) : ((fullFlag == TRUE) ? sexpIdentity = SG_ARGR_ID: TRUE);
-        localSize = RF_rTargetNonFactorCount * obsSize;
+        localSize = (ulong) RF_rTargetNonFactorCount * obsSize;
         *ensembleRGR = (double*) stackAndProtect(RF_auxDimConsts,
                                                  mode,
                                                  &RF_nativeIndex,
@@ -353,8 +405,10 @@ void stackDefinedOutputObjects(char mode) {
                                                  SG_sexpStringOutgoing,
                                                  ensembleRGRptr,
                                                  2,
-                                                 RF_rTargetNonFactorCount,
-                                                 obsSize);
+                                                 (const AuxiliaryDimension[]) {
+                                                   [1] = {RF_AUX_DIM_FIXED, RF_rTargetNonFactorCount},
+                                                   [2] = {RF_AUX_DIM_FIXED, obsSize}
+                                                 });
         (*ensembleRGRnum) = (double **) new_vvector(1, RF_rTargetNonFactorCount, NRUTIL_DPTR);
         for (j = 1; j <= RF_rTargetNonFactorCount; j++) {
           (*ensembleRGRnum)[j] = dvector(1, obsSize);
@@ -389,12 +443,14 @@ void stackDefinedOutputObjects(char mode) {
                                               SG_sexpStringOutgoing,
                                               &RF_perfCLSptr,
                                               3,
-                                              RF_ntree,
-                                              RF_rTargetFactorCount,
-                                              -1);
+                                              (const AuxiliaryDimension[]) {
+                                                [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+                                                [2] = {RF_AUX_DIM_FIXED, RF_rTargetFactorCount},
+                                                [3] = {RF_AUX_DIM_FACTOR_SIZE_PLUS_ONE, 0}
+                                              });
     }
     if (RF_rTargetNonFactorCount > 0) {
-      localSize = RF_ntree * RF_rTargetNonFactorCount;
+      localSize = (ulong) RF_ntree * RF_rTargetNonFactorCount;
       RF_perfRGR_ = (double*) stackAndProtect(RF_auxDimConsts,
                                               mode,
                                               &RF_nativeIndex,
@@ -405,8 +461,10 @@ void stackDefinedOutputObjects(char mode) {
                                               SG_sexpStringOutgoing,
                                               &RF_perfRGRptr,
                                               2,
-                                              RF_ntree,
-                                              RF_rTargetNonFactorCount);
+                                              (const AuxiliaryDimension[]) {
+                                                [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+                                                [2] = {RF_AUX_DIM_FIXED, RF_rTargetNonFactorCount}
+                                              });
     }
   }  
   if (RF_opt & OPT_LEAF) {
@@ -421,7 +479,9 @@ void stackDefinedOutputObjects(char mode) {
                                              SG_sexpStringOutgoing,
                                              NULL,
                                              1,
-                                             localSize);
+                                             (const AuxiliaryDimension[]) {
+                                               [1] = {RF_AUX_DIM_FIXED, localSize}
+                                             });
     RF_tLeafCount_ --;
     if (mode == RF_GROW) {
       RF_tLeafCount = RF_tLeafCount_;
@@ -444,7 +504,9 @@ void stackDefinedOutputObjects(char mode) {
                                       SG_sexpStringOutgoing,
                                       NULL,
                                       1,
-                                      localSize);
+                                      (const AuxiliaryDimension[]) {
+                                        [1] = {RF_AUX_DIM_FIXED, localSize}
+                                      });
     RF_seed_ --;
     for (i = 1; i <= RF_ntree; i++) {
       RF_seed_[i] = -1;
@@ -461,22 +523,49 @@ void stackDefinedOutputObjects(char mode) {
                                             SG_sexpStringOutgoing,
                                             NULL,
                                             1,
-                                            1);
+                                            (const AuxiliaryDimension[]) {
+                                              [1] = {RF_AUX_DIM_FIXED, 1}
+                                            });
     RF_optLoGrow_ --;
     RF_optLoGrow_[1] = RF_optLoGrow = RF_opt;
   }
   if (RF_opt & OPT_EMPR_RISK) {
-    localSize = RF_ntree * SG_lotSize;
-    SG_emprRSK_      = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_EMPR_RSK,     localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_emprRSKptr,    2, RF_ntree, SG_lotSize);
-    SG_oobEmprRSK_   = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_OOB_EMPR_RSK, localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_oobEmprRSKptr, 2, RF_ntree, SG_lotSize);
-    SG_cart_emprRSK_      = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_CART_EMPR_RSK,     localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_cart_emprRSKptr,    2, RF_ntree, SG_lotSize);
-    SG_cart_oobEmprRSK_   = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_CART_OOB_EMPR_RSK, localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_cart_oobEmprRSKptr, 2, RF_ntree, SG_lotSize);
+    localSize = (ulong) RF_ntree * SG_lotSize;
+    SG_emprRSK_      = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_EMPR_RSK,     localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_emprRSKptr,    2,
+      (const AuxiliaryDimension[]) {
+        [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+        [2] = {RF_AUX_DIM_FIXED, SG_lotSize}
+      });
+    SG_oobEmprRSK_   = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_OOB_EMPR_RSK, localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_oobEmprRSKptr, 2,
+      (const AuxiliaryDimension[]) {
+        [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+        [2] = {RF_AUX_DIM_FIXED, SG_lotSize}
+      });
+    SG_cart_emprRSK_      = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_CART_EMPR_RSK,     localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_cart_emprRSKptr,    2,
+      (const AuxiliaryDimension[]) {
+        [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+        [2] = {RF_AUX_DIM_FIXED, SG_lotSize}
+      });
+    SG_cart_oobEmprRSK_   = (double*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_CART_OOB_EMPR_RSK, localSize, RF_nativeNaN, SG_sexpStringOutgoing, &SG_cart_oobEmprRSKptr, 2,
+      (const AuxiliaryDimension[]) {
+        [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+        [2] = {RF_AUX_DIM_FIXED, SG_lotSize}
+      });
   }
   if (RF_optHigh & OPT_MEMB_USER) {
-    localSize = RF_ntree * obsSize;
-    SG_MEMB_ID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_MEMB_ID, localSize, 0, SG_sexpStringOutgoing, &SG_MEMB_ID_ptr, 2, RF_ntree, obsSize);
-    localSize = RF_ntree * obsSize;
-    SG_BOOT_CT_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BOOT_CT, localSize, 0, SG_sexpStringOutgoing, &SG_BOOT_CT_ptr, 2, RF_ntree, obsSize);
+    obsSize = (mode == RF_PRED) ? RF_fobservationSize : RF_observationSize;
+    localSize = (ulong) RF_ntree * obsSize;
+    SG_MEMB_ID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_MEMB_ID, localSize, 0, SG_sexpStringOutgoing, &SG_MEMB_ID_ptr, 2,
+      (const AuxiliaryDimension[]) {
+        [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+        [2] = {RF_AUX_DIM_FIXED, obsSize}
+      });
+    localSize = (ulong) RF_ntree * RF_observationSize;
+    SG_BOOT_CT_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BOOT_CT, localSize, 0, SG_sexpStringOutgoing, &SG_BOOT_CT_ptr, 2,
+      (const AuxiliaryDimension[]) {
+        [1] = {RF_AUX_DIM_FIXED, RF_ntree},
+        [2] = {RF_AUX_DIM_FIXED, RF_observationSize}
+      });
   }
   SG_cpuTime_ = (double*) stackAndProtect(RF_auxDimConsts,
                                           mode,
@@ -488,7 +577,9 @@ void stackDefinedOutputObjects(char mode) {
                                           SG_sexpStringOutgoing,
                                           NULL,
                                           1,
-                                          1);
+                                          (const AuxiliaryDimension[]) {
+                                            [1] = {RF_AUX_DIM_FIXED, 1}
+                                          });
   SG_cpuTime_ --;
 }
 void unstackDefinedOutputObjects(char mode) {
@@ -581,18 +672,6 @@ void stackForestObjectsPtrOnly(char mode) {
             SG_betaP_ptr[i][j]  = NULL;
           }
         }
-      SG_rmbrTNodeCT_ptr = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
-      SG_ombrTNodeCT_ptr = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
-      for (i = 1; i <= RF_ntree; i++) {
-        SG_rmbrTNodeCT_ptr[i] = NULL;
-        SG_ombrTNodeCT_ptr[i] = NULL;
-      }
-      SG_rmbrTNodeID_ptr = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
-      SG_ombrTNodeID_ptr = (uint **) new_vvector(1, RF_ntree, NRUTIL_UPTR);
-      for (i = 1; i <= RF_ntree; i++) {
-        SG_rmbrTNodeID_ptr[i] = NULL;
-        SG_ombrTNodeID_ptr[i] = NULL;
-      }
 }
 void unstackForestObjectsPtrOnly(char mode) {
   uint treeID;
@@ -614,19 +693,11 @@ void unstackForestObjectsPtrOnly(char mode) {
       free_new_vvector(SG_yStar_ptr,   1,  RF_ntree, NRUTIL_DPTR);      
       free_new_vvector(SG_betaZ_ptr,   1,  RF_ntree, NRUTIL_DPTR);
       free_new_vvector(SG_betaP_ptr,   1,  RF_ntree, NRUTIL_DPTR2);
-      free_new_vvector(SG_rmbrTNodeCT_ptr, 1, RF_ntree, NRUTIL_UPTR);
-      free_new_vvector(SG_ombrTNodeCT_ptr, 1, RF_ntree, NRUTIL_UPTR);
-      free_new_vvector(SG_rmbrTNodeID_ptr, 1, RF_ntree, NRUTIL_UPTR);
-      free_new_vvector(SG_ombrTNodeID_ptr, 1, RF_ntree, NRUTIL_UPTR);
 }
 void stackTreeObjectsPtrOnly(char mode, uint treeID) {
-  uint nodeCount, termCount;
-  uint rmbrCount, ombrCount;
+  uint nodeCount;
   uint j;
     nodeCount = RF_nodeCount[treeID];
-    termCount = RF_tLeafCount[treeID];
-    rmbrCount = RF_bootstrapSize;
-    ombrCount = RF_oobSize[treeID];
     SG_treeID_ptr[treeID]     = uivector(1, nodeCount);
     SG_nodeID_ptr[treeID]     = uivector(1, nodeCount);
     SG_nodeSZ_ptr[treeID]     = uivector(1, nodeCount);
@@ -640,19 +711,11 @@ void stackTreeObjectsPtrOnly(char mode, uint treeID) {
       for (j = 1; j <= SG_augmObjCommon -> hcutCnt; j++) {
         SG_betaP_ptr[treeID][j] = dvector(1, nodeCount);
       }
-    SG_rmbrTNodeCT_ptr[treeID] = uivector(1, termCount);
-    SG_ombrTNodeCT_ptr[treeID] = uivector(1, termCount);
-    SG_rmbrTNodeID_ptr[treeID] = uivector(1, rmbrCount);
-    SG_ombrTNodeID_ptr[treeID] = uivector(1, ombrCount + 1);  
 }
 void unstackTreeObjectsPtrOnly(uint treeID) {
-  uint nodeCount, termCount;
-  uint rmbrCount, ombrCount;
+  uint nodeCount;
   uint j;
   nodeCount = RF_nodeCount[treeID];
-  termCount = RF_tLeafCount[treeID];  
-  rmbrCount = RF_bootstrapSize;
-  ombrCount = RF_oobSize[treeID];
   free_uivector(SG_treeID_ptr[treeID],     1, nodeCount);
   free_uivector(SG_nodeID_ptr[treeID],     1, nodeCount);
   free_uivector(SG_nodeSZ_ptr[treeID],     1, nodeCount);
@@ -666,14 +729,10 @@ void unstackTreeObjectsPtrOnly(uint treeID) {
     for (j = 1; j <= SG_augmObjCommon -> hcutCnt; j++) {
       free_dvector(SG_betaP_ptr[treeID][j], 1, nodeCount);
     }
-  free_uivector(SG_rmbrTNodeCT_ptr[treeID], 1, termCount);
-  free_uivector(SG_ombrTNodeCT_ptr[treeID], 1, termCount);
-  free_uivector(SG_rmbrTNodeID_ptr[treeID], 1, rmbrCount);
-  free_uivector(SG_ombrTNodeID_ptr[treeID], 1, ombrCount + 1);  
 }
 void stackForestObjectsOutput(char mode) {
-  uint totalNodeCount;
-  uint localSize;
+  ulong totalNodeCount;
+  ulong localSize;
   uint treeID;
       RF_totalNodeCount = 0;
       RF_totalTermCount = 0;
@@ -681,70 +740,77 @@ void stackForestObjectsOutput(char mode) {
         RF_totalNodeCount += RF_nodeCount[treeID];
         RF_totalTermCount += RF_tLeafCount[treeID];
       }
+      if (RF_totalNodeCount > (ulong) INT_MAX) {
+        RF_nativeError("\nRF-SGT:  *** ERROR *** ");
+        RF_nativeError("\nRF-SGT: Total forest node count exceeds the supported maximum of %d: %llu.",
+                       INT_MAX, (unsigned long long) RF_totalNodeCount);
+        RF_nativeExit();
+      }
       totalNodeCount = RF_totalNodeCount;
-      SG_treeID_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_TREE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
-      SG_nodeID_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
-      SG_nodeSZ_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_NODE_SZ, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
-      SG_brnodeID_ =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BR_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
-      SG_prnodeID_ =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_PR_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
+      SG_treeID_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_TREE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
+      SG_nodeID_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
+      SG_nodeSZ_   =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_NODE_SZ, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
+      SG_brnodeID_ =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BR_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
+      SG_prnodeID_ =   (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_PR_NODE_ID, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
       SG_treeID_   --;
       SG_nodeID_   --;
       SG_nodeSZ_   --;
       SG_brnodeID_ --;
       SG_prnodeID_ --;
-      SG_nodeStat_ = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_NODE_STAT, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
+      SG_nodeStat_ = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_NODE_STAT, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
       SG_nodeStat_ --;
-      SG_bsf_ = (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BSF_ORD, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
+      SG_bsf_ = (uint*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_BSF_ORD, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
       SG_bsf_ --;
-      SG_betaZ_    = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_BETA_Z, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
+      SG_betaZ_    = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_BETA_Z, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
       SG_betaZ_    --;
-      SG_yBar_    = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_YBAR, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
+      SG_yBar_    = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_YBAR, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
       SG_yBar_    --;
-      SG_yStar_    = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_YSTAR, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1, totalNodeCount);
+      SG_yStar_    = (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_YSTAR, totalNodeCount, 0, SG_sexpStringOutgoing, NULL, 1,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
       SG_yStar_    --;
-      localSize = SG_augmObjCommon -> hcutCnt * totalNodeCount;
-      SG_betaP_ =   (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_BETA_P, localSize, 0, SG_sexpStringOutgoing, &SG_BETA_P_ptr, 2, SG_augmObjCommon -> hcutCnt, totalNodeCount);
-      localSize = RF_totalTermCount;
-      SG_rmbrTNodeCT_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_RMBR_TN_CT, localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
-      SG_ombrTNodeCT_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_OMBR_TN_CT, localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
-      SG_rmbrTNodeCT_ --;
-      SG_ombrTNodeCT_ --;
-      localSize = (ulong) RF_ntree * RF_bootstrapSize;
-      SG_rmbrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_RMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
-      localSize = 0;
-      for (treeID = 1; treeID <= RF_ntree; treeID++) {
-        localSize += RF_oobSize[treeID];
-      }
-      if (localSize > 0) {
-        SG_ombrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_OMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
-        SG_ombrTNodeID_ --;
-      }
-      else {
-        localSize = 0;
-        for (uint treeID = 1; treeID <= RF_ntree; treeID++) {
-          localSize += RF_tLeafCount[treeID];
-        }
-        SG_ombrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_OMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, NULL, 1, localSize);
-        SG_ombrTNodeID_ --;
-      }
-      localSize = (ulong) RF_ntree * RF_observationSize;
-      SG_ambrTNodeID_ = (uint*) stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_INTEGER, SG_AMBR_TN_ID,  localSize, 0, SG_sexpStringOutgoing, &SG_ambrTNodeID_ptr, 2, RF_ntree, RF_observationSize);
-      SG_rmbrTNodeID_ --;
-      SG_ambrTNodeID_ --;
+      localSize = (ulong) SG_augmObjCommon -> hcutCnt * totalNodeCount;
+      SG_betaP_ =   (double*)  stackAndProtect(RF_auxDimConsts, mode, &RF_nativeIndex, NATIVE_TYPE_NUMERIC, SG_BETA_P, localSize, 0, SG_sexpStringOutgoing, &SG_BETA_P_ptr, 2,
+        (const AuxiliaryDimension[]) {
+          [1] = {RF_AUX_DIM_FIXED, SG_augmObjCommon -> hcutCnt},
+          [2] = {RF_AUX_DIM_FIXED, totalNodeCount}
+        });
 }
 void writeForestObjectsOutput(char mode) {
   LeafLinkedObj **leafLinkedObjMap;
   LeafLinkedObj  *leafLinkedPtr;
-  Terminal *termPtr;
-  uint      nodeID;
-  uint      genMembrSize;
-  uint     *genMembrIndx;
-  uint offset, offsetCT, offsetID_rmbr, offsetID_ombr;
+  ulong offset;
   uint treeID;
-  uint i, j, k;
+  uint j, k;
       offset = 0;
-      offsetCT = 0;
-      offsetID_rmbr = offsetID_ombr = 0;
       for (treeID = 1; treeID <= RF_ntree; treeID++) {
         leafLinkedObjMap = (LeafLinkedObj **) new_vvector(1, RF_tLeafCount[treeID], NRUTIL_LEAFPTR2);
         leafLinkedPtr = RF_leafLinkedObjHead[treeID] -> fwdLink;
@@ -764,50 +830,16 @@ void writeForestObjectsOutput(char mode) {
           SG_yBar_[offset]     = SG_yBar_ptr[treeID][k];
           SG_yStar_[offset]    = SG_yStar_ptr[treeID][k];          
           SG_betaZ_[offset]    = SG_betaZ_ptr[treeID][k];
-          if (SG_brnodeID_[offset] == 0) {
-            nodeID = SG_nodeID_[offset];
-            termPtr = (Terminal *) (leafLinkedObjMap[nodeID] -> termPtr);
-            genMembrSize = termPtr -> oobMembrCount;
-            genMembrIndx = termPtr -> oobMembrIndx;
-            for (i = 1; i <= genMembrSize; i++) {
-              SG_ambrTNodeID_ptr[treeID][genMembrIndx[i]] = offset;
-            }
-            genMembrSize = termPtr -> ibgMembrCount;
-            genMembrIndx = termPtr -> ibgMembrIndx;
-            for (i = 1; i <= genMembrSize; i++) {
-              SG_ambrTNodeID_ptr[treeID][genMembrIndx[i]] = offset;
-            }
-          }            
           for (j = 1; j <= SG_augmObjCommon -> hcutCnt; j++) {
             SG_BETA_P_ptr[j][offset] = SG_betaP_ptr[treeID][j][k];
           }
-        }
-        for (k = 1; k <= RF_tLeafCount[treeID]; k++) {
-          offsetCT ++;
-          SG_rmbrTNodeCT_[offsetCT]  = SG_rmbrTNodeCT_ptr[treeID][k];
-          SG_ombrTNodeCT_[offsetCT]  = SG_ombrTNodeCT_ptr[treeID][k];
-        }
-        for (k = 1; k <= RF_bootstrapSize; k++) {
-          offsetID_rmbr ++;
-          SG_rmbrTNodeID_[offsetID_rmbr]  = SG_rmbrTNodeID_ptr[treeID][k];
-        }
-        for (k = 1; k <= RF_oobSize[treeID]; k++) {
-          offsetID_ombr ++;
-          SG_ombrTNodeID_[offsetID_ombr]  = SG_ombrTNodeID_ptr[treeID][k];
         }
         free_new_vvector(leafLinkedObjMap, 1, RF_tLeafCount[treeID], NRUTIL_LEAFPTR2);
       }
       if (offset != RF_totalNodeCount) {
         RF_nativeError("\nRF-SRC:  *** ERROR *** ");
         RF_nativeError("\nRF-SRC:  Inconsistent total node count encountered during writing of forest topology.");
-        RF_nativeError("\nRF-SRC:  Offset versus total was:  %20lu, %20lu", offset, RF_totalNodeCount);
-        RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
-        RF_nativeExit();
-      }
-      if (offsetCT != RF_totalTermCount) {
-        RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-        RF_nativeError("\nRF-SRC:  Inconsistent total terminal count encountered during writing of forest topology.");
-        RF_nativeError("\nRF-SRC:  Offset versus total was:  %20lu, %20lu", offsetCT, RF_totalTermCount);
+        RF_nativeError("\nRF-SRC:  Offset versus total was:  %20llu, %20llu", (unsigned long long) offset, (unsigned long long) RF_totalNodeCount);
         RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
         RF_nativeExit();
       }
@@ -835,7 +867,7 @@ void stackForestObjectsAuxOnlySGT(void) {
       RF_nativeError("\nRF-SRC:      treeID     nodeID ");
       RF_nativeError("\nRF-SRC:  %10d %10d \n", SG_treeID_[ui], SG_nodeID_[ui]);
       RF_nativeError("\nRF-SRC:  *** ERROR *** ");
-      RF_nativeError("\nRF-SRC:  Invalid forest input record at line:  %20lu", ui);
+      RF_nativeError("\nRF-SRC:  Invalid forest input record at line:  %20llu", (unsigned long long) ui);
       RF_nativeError("\nRF-SRC:  Please Contact Technical Support.");
       RF_nativeExit();
     }

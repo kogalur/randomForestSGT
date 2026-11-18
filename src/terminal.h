@@ -4,8 +4,8 @@ typedef struct terminal Terminal;
 struct terminal {
   struct terminalBase base;
   double mean;
-  uint repMembrCount, oobMembrCount, ibgMembrCount;
+  uint repMembrCount, oobMembrCount, ibgMembrCount, tstMembrCount;
   uint allMembrCount;
-  uint *oobMembrIndx, *repMembrIndx, *ibgMembrIndx;
+  uint *oobMembrIndx, *repMembrIndx, *ibgMembrIndx, *tstMembrIndx;
 };
 #endif

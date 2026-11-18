@@ -32,6 +32,7 @@
 #include "cdlRegr.h"
 #include "sexpOutgoing.h"
 #include "stackOutput.h"
+#include "stackOutputQQ.h"
 #include "splitUtil.h"
 #include "processEnsemble.h"
 #include "regressionDerived.h"
@@ -335,7 +336,8 @@ char sgtMain(char mode, int seedValue) {
                                              RF_rTargetFactor,
                                              RF_rTargetFactorCount,
                                              RF_tLeafCount_,
-                                             RF_holdBLKptr);
+                                             RF_holdBLKptr,
+                                             NULL);
           for(b = 1; b <= RF_ntree; b++) {
             RF_serialTreeIndex[b] = 0;
           }
@@ -364,41 +366,29 @@ char sgtMain(char mode, int seedValue) {
           randomGetChainB    = &randomGetChainParallelB;
           stackRandom(ranChainCnt, ranChainCnt, 0, 0);
           if (mode == RF_GROW) {
-            seedValueLC = abs(seedValue);
-            lcgenerator(&seedValueLC, TRUE);
+            seedValueLC = 0U - (uint) seedValue;
+            lcgeneratorWide(&seedValueLC, TRUE);
             for (b = 1; b <= ranChainCnt; b++) {
-              lcgenerator(&seedValueLC, FALSE);
-              lcgenerator(&seedValueLC, FALSE);
-              while(seedValueLC == 0) {
-                lcgenerator(&seedValueLC, FALSE);
-              }
-              randomSetChainA(b, -seedValueLC);
+              lcgeneratorWide(&seedValueLC, FALSE);
+              randomSetChainA(b, -(int) seedValueLC);
               if (RF_opt & OPT_SEED) {
                 RF_seed_[b] = randomGetChainA(b);
               }
             }
             for (b = 1; b <= ranChainCnt; b++) {
-              lcgenerator(&seedValueLC, FALSE);
-              lcgenerator(&seedValueLC, FALSE);
-              while(seedValueLC == 0) {
-                lcgenerator(&seedValueLC, FALSE);
-              }
-              randomSetChainB(b, -seedValueLC);
+              lcgeneratorWide(&seedValueLC, FALSE);
+              randomSetChainB(b, -(int) seedValueLC);
             }
           }  
           else {
             for (b = 1; b <= ranChainCnt; b++) {
               randomSetChainA(b , RF_seed_[b]);
             }
-            seedValueLC = abs(seedValue);
-            lcgenerator(&seedValueLC, TRUE);
+            seedValueLC = 0U - (uint) seedValue;
+            lcgeneratorWide(&seedValueLC, TRUE);
             for (b = 1; b <= ranChainCnt; b++) {
-              lcgenerator(&seedValueLC, FALSE);
-              lcgenerator(&seedValueLC, FALSE);
-              while(seedValueLC == 0) {
-                lcgenerator(&seedValueLC, FALSE);
-              }
-              randomSetChainB(b, -seedValueLC);
+              lcgeneratorWide(&seedValueLC, FALSE);
+              randomSetChainB(b, -(int) seedValueLC);
             }
           }
 #ifdef _OPENMP
@@ -463,8 +453,13 @@ char sgtMain(char mode, int seedValue) {
             if (RF_opt & OPT_TREE) {
               stackForestObjectsPtrOnly(mode);
             }
+            stackTNQualitativeObjectsForestPtr(mode);            
           }
-          else {
+          else if (mode == RF_REST) {
+            stackTNQualitativeObjectsForestPtr(mode);
+            stackForestObjectsAuxOnlySGT();
+          } 
+          else if (mode == RF_PRED) {
             stackForestObjectsAuxOnlySGT();
           }
 #ifdef _OPENMP
@@ -481,8 +476,19 @@ char sgtMain(char mode, int seedValue) {
               writeForestObjectsOutput(mode);
               unstackForestObjectsPtrOnly(mode);
             }
+            stackTNQualitativeObjectsOutput(mode);
+            writeTNQualitativeObjectsOutput(mode);
+            unstackTNQualitativeObjectsForestPtr(mode);
             break;
-          default:
+          case RF_REST:
+            stackTNQualitativeObjectsOutput(mode);
+            writeTNQualitativeObjectsOutput(mode);
+            unstackTNQualitativeObjectsForestPtr(mode);
+            unstackForestObjectsAuxOnlySGT();
+            break;
+          case RF_PRED:
+            stackTNQualitativeObjectsOutputTest(mode);
+            writeTNQualitativeObjectsOutputTest(mode);
             unstackForestObjectsAuxOnlySGT();
             break;
           }

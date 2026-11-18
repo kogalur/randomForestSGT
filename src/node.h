@@ -18,8 +18,8 @@ struct node {
   uint hcut;
   char outcome;
   struct splitInfoDerived *splitInfoDerived;
-  unsigned int  testMembrSizeAlloc;
-  unsigned int  testMembrSize;
-  unsigned int *testMembrIndx;
+  unsigned int  tstMembrSizeAlloc;
+  unsigned int  tstMembrSize;
+  unsigned int *tstMembrIndx;
 };
 #endif
